@@ -1,0 +1,40 @@
+This is the problem statement, so after reading this, I can see that these are the problems they are facing
+
+-implement a simple, user-friendly system for bookings and data   
+management that does not exclude digitally disadvantaged families.  
+- Ensure we can differentiate between number of bookings and number of   
+young people accessing the service and how often e.g. 10 bookings could be   
+3 young people accessing 3 or 4 times rather than 10 service users  
+- Ensure the booking process is not a barrier, but a tool to help OYCI   
+understand and respond to community needs  
+- Integrate staff scheduling, leave management, and payroll to save time and   
+reduce errors.  
+- Enable spontaneous participation for individuals and families.  
+- Address annual confidentiality renewals in a user-friendly way.  
+- the absence of streamlined systems prevents OYCI from scaling its impact   
+and reaching more marginalised young people.  
+
+The existing tools used in their workflow
+- Bookeo (booking management)
+- Zoho People (staff management)
+- Xero 9 (payroll)
+- MS365 (to have record and assign the events mannuallu and otjer manual tasks)
+
+
+So what I am thnking is creating a web app which will have two sides /admin and /users
+
+Users:
+  - Since the family tree is important, we will have family with father/mother accounts can be added and they can add their childeres
+  - while selecting events, they can just simply click and user will be booked
+  -  the user onboard should cover the form fields.
+  - the children can add other childerena and parent can add childeren.
+ - Events list will be shown
+  Admin:
+- Admin panel first will show all the events lists table and if they click each events, the detailed explaination will be shown
+- Add events allso will be there where the schedules and other events will be added and listed in events list in user and adimin as well
+- In admin panel, user can add their staffs in staffs tab, with basic data and they can assign the staffs
+- We will integrate staffs with zoho people so that if staff is put on leave, the events will be unassigned and Email/notifications  will be sent to superadmin staff or all staffs who are available and they can assign.
+- In events details tab, they can mark the attendence for each users/participants.
+
+
+These are the user flows I think of can you design yours by taking this as inititaive and give suggestions as well for improvements.
