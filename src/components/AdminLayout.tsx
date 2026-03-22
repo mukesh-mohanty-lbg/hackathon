@@ -13,7 +13,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Calendar, UserCheck, Users2, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Calendar, UserCheck, Users2, LogOut, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 const adminNav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
