@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Home, Calendar, Users, Settings, LogOut } from "lucide-react";
+import { Home, Calendar, Users, Settings, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/use-theme";
 
 const navItems = [
   { to: "/dashboard", label: "Home", icon: Home },
@@ -11,6 +12,7 @@ const navItems = [
 
 const UserLayout = () => {
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -39,9 +41,13 @@ const UserLayout = () => {
               );
             })}
           </nav>
-          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut className="w-4 h-4" />
-          </Link>
+          <button
+            onClick={toggleTheme}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-accent"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
         </div>
       </header>
 
