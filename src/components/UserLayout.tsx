@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Home, Calendar, Users, Settings, LogOut } from "lucide-react";
+import { Home, Calendar, Users, Settings, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/use-theme";
 
 const navItems = [
   { to: "/dashboard", label: "Home", icon: Home },
