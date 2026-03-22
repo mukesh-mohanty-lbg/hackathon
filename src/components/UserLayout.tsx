@@ -41,9 +41,13 @@ const UserLayout = () => {
               );
             })}
           </nav>
-          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut className="w-4 h-4" />
-          </Link>
+          <button
+            onClick={toggleTheme}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-accent"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
         </div>
       </header>
 
