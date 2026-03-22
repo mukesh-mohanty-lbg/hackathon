@@ -18,6 +18,27 @@ const UserLayout = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/dashboard" className="font-bold text-lg tracking-tight text-primary">OYCI</Link>
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map(({ to, label, icon: Icon }) => {
+              const active = location.pathname === to || location.pathname.startsWith(to + "/");
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
             <LogOut className="w-4 h-4" />
           </Link>
