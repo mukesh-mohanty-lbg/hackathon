@@ -60,6 +60,7 @@ function AdminSidebar() {
 }
 
 const AdminLayout = () => {
+  const { theme, toggleTheme } = useTheme();
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
