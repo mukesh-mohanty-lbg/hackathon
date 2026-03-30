@@ -36,7 +36,10 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedId = localStorage.getItem('currentUserId')
+    return savedId ? (USERS.find(u => u.id === savedId && u.isActive) ?? null) : null
+  })
   const [users, setUsers] = useState<User[]>(USERS)
   const [events, setEvents] = useState<Event[]>(EVENTS)
   const [availabilityOverrides, setAvailabilityOverrides] = useState<StaffAvailabilityOverride[]>(AVAILABILITY_OVERRIDES)
@@ -47,10 +50,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const user = USERS.find(u => u.email === email)
     if (!user || !user.isActive) return false
     setCurrentUser(user)
+    localStorage.setItem('currentUserId', user.id)
     return true
   }, [])
 
-  const logout = useCallback(() => setCurrentUser(null), [])
+  const logout = useCallback(() => {
+    setCurrentUser(null)
+    localStorage.removeItem('currentUserId')
+  }, [])
 
   const addUser = useCallback((data: Omit<User, 'id'>) => {
     setUsers(prev => [...prev, { ...data, id: `u${Date.now()}` }])

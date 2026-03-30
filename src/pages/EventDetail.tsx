@@ -11,6 +11,7 @@ import { ArrowLeft, Users, MapPin, Clock, Calendar, UserPlus, UserMinus, CheckCi
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import BookingQRCode from '@/components/custom/BookingQRCode'
 import { ProgressBar } from '@/components/custom/ProgressBar'
+import { CollapsibleAttendance } from '@/components/custom/ColllapsibleAttendance'
 
 interface EventDetailProps {
   instanceId: string
@@ -129,8 +130,12 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
           <InfoTile icon={<Clock className="size-4" />} label="Staff Shift" value={`${instance.shiftStartTime}–${instance.shiftEndTime}`} />
         )}
         <InfoTile icon={<MapPin className="size-4" />} label="Venue" value={instance.venueOverride ?? event.venue} />
-        <ProgressBar label={'Attendees'} labeledValue={`${instance.attendees.length} / ${event.maxAttendees}`} value={(instance.attendees.length / event.maxAttendees) * 100} />
       </div>
+
+      
+      {instance.attendees.length > 0 && (
+          <CollapsibleAttendance event={event} instance={instance} instanceId={instanceId} isIndividual={isIndividual} onNavigate={onNavigate}/>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -232,38 +237,6 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
         )}
       </div>
 
-      {instance.attendees.length > 0 && (
-        <Card>
-          <CardHeader className="border-b border-border">
-            <div className="flex items-center justify-between">
-              <div><CardTitle>Attendees</CardTitle><CardDescription>{instance.attendees.length} registered</CardDescription></div>
-              {instance.status !== 'completed' && !isIndividual && (
-                <Button size="sm" variant="outline" onClick={() => onNavigate('attendance', { instanceId })} className="gap-2">
-                  <CheckCircle2 className="size-4" />Take Attendance<ChevronRight className="size-4" />
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {instance.attendees.map(a => (
-                <li key={a.youngPersonId} className="flex items-center justify-between gap-3 p-4 w-full">
-                  <div className="flex items-center gap-6 px-6">
-                    <span className="text-sm font-bold flex-1">{a.youngPersonId} </span>
-                    <div>
-                    <span className="text-sm font-bold flex-1">{a.name}</span>
-                    </div>
-                  </div>
-                    {a.present === null ? <Badge variant="outline" className="text-xs">Pending</Badge>
-                      : a.present ? <Badge variant="success" className="text-xs">Present</Badge>
-                        : <Badge variant="destructive" className="text-xs">Absent</Badge>}
-
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
 
       <Dialog open={conflictDialog.open} onOpenChange={o => setConflictDialog(d => ({ ...d, open: o }))}>
         <DialogContent>
