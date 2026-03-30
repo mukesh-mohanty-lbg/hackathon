@@ -24,6 +24,8 @@ export interface EventInstance {
   date: string
   startTime: string
   endTime: string
+  shiftStartTime?: string
+  shiftEndTime?: string
   venueOverride?: string
   staffAssigned: string[]
   maxAttendees: number

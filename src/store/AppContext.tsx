@@ -128,19 +128,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetInst = targetEvent.instances.find(i => i.id === instanceId)!
 
       const conflicts: ConflictWarning[] = []
+      const targetShiftStart = targetInst.shiftStartTime ?? targetInst.startTime
+      const targetShiftEnd = targetInst.shiftEndTime ?? targetInst.endTime
       for (const ev of events) {
         for (const inst of ev.instances) {
           if (inst.id === instanceId) continue
           if (inst.date !== targetInst.date) continue
           if (!inst.staffAssigned.includes(staffId)) continue
-          if (targetInst.startTime < inst.endTime && targetInst.endTime > inst.startTime) {
+          const instShiftStart = inst.shiftStartTime ?? inst.startTime
+          const instShiftEnd = inst.shiftEndTime ?? inst.endTime
+          if (targetShiftStart < instShiftEnd && targetShiftEnd > instShiftStart) {
             const staff = USERS.find(u => u.id === staffId)
             conflicts.push({
               staffId,
               staffName: staff?.name ?? staffId,
               conflictingEventTitle: ev.title,
               conflictDate: inst.date,
-              conflictTime: `${inst.startTime}–${inst.endTime}`,
+              conflictTime: `${instShiftStart}–${instShiftEnd}`,
             })
           }
         }

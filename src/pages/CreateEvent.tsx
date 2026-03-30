@@ -20,13 +20,13 @@ type Step = 1 | 2 | 3 | 4
 
 interface FormState {
   title: string; description: string; type: EventType; venue: string; ageGroup: string; tags: string
-  instances: Array<{ date: string; startTime: string; endTime: string }>
+  instances: Array<{ date: string; startTime: string; endTime: string; shiftStartTime: string; shiftEndTime: string }>
   recurrence: RecurrenceType; requiredStaff: number; maxAttendees: number
 }
 
 const INITIAL: FormState = {
   title: '', description: '', type: 'activity', venue: '', ageGroup: '', tags: '',
-  instances: [{ date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00' }],
+  instances: [{ date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00', shiftStartTime: '08:30', shiftEndTime: '17:30' }],
   recurrence: 'none', requiredStaff: 2, maxAttendees: 20,
 }
 
@@ -59,6 +59,7 @@ export function CreateEvent({ onNavigate }: CreateEventProps) {
     if (!confirm) { setStep(1); return }
     const instances: EventInstance[] = form.instances.map((inst, i) => ({
       id: `i_${Date.now()}_${i}`, eventId: '', date: inst.date, startTime: inst.startTime, endTime: inst.endTime,
+      shiftStartTime: inst.shiftStartTime || undefined, shiftEndTime: inst.shiftEndTime || undefined,
       staffAssigned: [], maxAttendees: form.maxAttendees, attendees: [], status: 'scheduled' as const,
     }))
     const ev = addEvent({
@@ -158,9 +159,9 @@ function Step1({ form, field, errors }: { form: FormState; field: <K extends key
 }
 
 function Step2({ form, field, errors }: { form: FormState; field: <K extends keyof FormState>(k: K, v: FormState[K]) => void; errors: Record<string, string> }) {
-  const addInstance = () => field('instances', [...form.instances, { date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00' }])
+  const addInstance = () => field('instances', [...form.instances, { date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00', shiftStartTime: '08:30', shiftEndTime: '17:30' }])
   const removeInstance = (i: number) => field('instances', form.instances.filter((_, idx) => idx !== i))
-  const updateInstance = (i: number, key: 'date' | 'startTime' | 'endTime', val: string) =>
+  const updateInstance = (i: number, key: 'date' | 'startTime' | 'endTime' | 'shiftStartTime' | 'shiftEndTime', val: string) =>
     field('instances', form.instances.map((inst, idx) => idx === i ? { ...inst, [key]: val } : inst))
 
   return (
@@ -191,8 +192,12 @@ function Step2({ form, field, errors }: { form: FormState; field: <K extends key
             </div>
             <div className="grid grid-cols-3 gap-2">
               <FF label="Date" required={true}><Input type="date" value={inst.date} onChange={e => updateInstance(i, 'date', e.target.value)} /></FF>
-              <FF label="Start" required={true} error={errors[`time_${i}`]}><Input type="time" value={inst.startTime} onChange={e => updateInstance(i, 'startTime', e.target.value)} /></FF>
-              <FF label="End" required={true}><Input type="time" value={inst.endTime} onChange={e => updateInstance(i, 'endTime', e.target.value)} /></FF>
+              <FF label="Event Start" required={true} error={errors[`time_${i}`]}><Input type="time" value={inst.startTime} onChange={e => updateInstance(i, 'startTime', e.target.value)} /></FF>
+              <FF label="Event End" required={true}><Input type="time" value={inst.endTime} onChange={e => updateInstance(i, 'endTime', e.target.value)} /></FF>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <FF label="Shift Start" required={false}><Input type="time" value={inst.shiftStartTime} onChange={e => updateInstance(i, 'shiftStartTime', e.target.value)} /></FF>
+              <FF label="Shift End" required={false}><Input type="time" value={inst.shiftEndTime} onChange={e => updateInstance(i, 'shiftEndTime', e.target.value)} /></FF>
             </div>
           </div>
         ))}

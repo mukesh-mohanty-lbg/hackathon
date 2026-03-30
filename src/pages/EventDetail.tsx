@@ -124,9 +124,11 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <InfoTile icon={<Calendar className="size-4" />} label="Date" value={dateLabel} />
-        <InfoTile icon={<Clock className="size-4" />} label="Time" value={`${instance.startTime}–${instance.endTime}`} />
+        <InfoTile icon={<Clock className="size-4" />} label="Event Time" value={`${instance.startTime}–${instance.endTime}`} />
+        {instance.shiftStartTime && instance.shiftEndTime && (
+          <InfoTile icon={<Clock className="size-4" />} label="Staff Shift" value={`${instance.shiftStartTime}–${instance.shiftEndTime}`} />
+        )}
         <InfoTile icon={<MapPin className="size-4" />} label="Venue" value={instance.venueOverride ?? event.venue} />
-        <InfoTile icon={<Users className="size-4" />} label="Attendees" value={`${instance.attendees.length} / ${event.maxAttendees}`} />
         <ProgressBar label={'Attendees'} labeledValue={`${instance.attendees.length} / ${event.maxAttendees}`} value={(instance.attendees.length / event.maxAttendees) * 100} />
       </div>
 
