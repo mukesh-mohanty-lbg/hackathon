@@ -11,6 +11,12 @@ Currently, two official plugins are available:
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
+## Default credentials
+
+Admin: admin@oyci.org.uk / abc123
+Staff: staff@oyci.org.uk / abc123
+YoungPeople: tomf@oyci.org.uk / abc123
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
@@ -71,3 +77,4 @@ export default defineConfig([
   },
 ])
 ```
+
