@@ -24,8 +24,9 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.508 0.118 165.612);
+  --popover-foreground: oklch(14.479% 0.00002 271.152);
+  /* --primary: oklch(0.508 0.118 165.612); */
+  --primary: oklch(61.57% 0.25274 355.125);
   --primary-foreground: oklch(0.979 0.021 166.113);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -53,7 +54,14 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-a {
+p {
+  text-align: left;
+}
+h1 {
+  text-align: left;
+}
+
+/* a {
   font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
@@ -63,9 +71,9 @@ a:hover {
 }
 
 body {
-  margin: 0;
   display: flex;
   place-items: center;
+  justify-content: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -105,7 +113,7 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
-}
+} */
 
 .dark {
   --background: oklch(0.145 0 0);
@@ -114,7 +122,8 @@ button:focus-visible {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.432 0.095 166.913);
+  /* --primary: oklch(0.432 0.095 166.913); */
+  --primary: oklch(61.57% 0.25274 355.125);
   --primary-foreground: oklch(0.979 0.021 166.113);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
