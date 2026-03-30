@@ -6,22 +6,20 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { AvailabilityStatus, User } from '@/types'
-import { CalendarDays, Pencil, Info } from 'lucide-react'
+import type { User } from '@/types'
+import { CalendarDays, Pencil } from 'lucide-react'
 
-const STATUS_META: Record<AvailabilityStatus, { label: string; variant: 'success' | 'warning' | 'destructive'; dot: string }> = {
-  available: { label: 'Available', variant: 'success', dot: 'bg-emerald-500' },
-  partial: { label: 'Partial', variant: 'warning', dot: 'bg-amber-500' },
+const STATUS_META: Record<'free' | 'conflict' | 'unavailable', { label: string; variant: 'success' | 'warning' | 'destructive'; dot: string }> = {
+  free: { label: 'Free', variant: 'success', dot: 'bg-emerald-500' },
+  conflict: { label: 'Shift conflict', variant: 'warning', dot: 'bg-amber-500' },
   unavailable: { label: 'Unavailable', variant: 'destructive', dot: 'bg-red-500' },
 }
 
 export function StaffAvailability() {
-  const { users, events, setAvailabilityOverride, updateAvailability, availabilityOverrides } = useApp()
+  const { users, events, setAvailabilityOverride, updateAvailability, getStaffStatusForDay } = useApp()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selected, setSelected] = useState<User | null>(null)
   const [overrideDate, setOverrideDate] = useState(new Date().toISOString().split('T')[0])
-  const [overrideStatus, setOverrideStatus] = useState<AvailabilityStatus>('available')
   const [overrideNote, setOverrideNote] = useState('')
 
   const staffList = users.filter(u => u.isActive)
@@ -33,12 +31,8 @@ export function StaffAvailability() {
   const getAssignmentCount = (staffId: string) =>
     events.flatMap(e => e.instances).filter(i => i.staffAssigned.includes(staffId) && i.status === 'scheduled').length
 
-  const getOverride = (staffId: string, date: string) =>
-    availabilityOverrides.find(o => o.staffId === staffId && o.date === date)
-
   const openOverride = (u: User) => {
     setSelected(u)
-    setOverrideStatus(u.availability)
     setOverrideNote(u.availabilityNote ?? '')
     setOverrideDate(today)
     setDialogOpen(true)
@@ -46,8 +40,8 @@ export function StaffAvailability() {
 
   const handleSave = () => {
     if (!selected) return
-    setAvailabilityOverride({ staffId: selected.id, date: overrideDate, status: overrideStatus, note: overrideNote })
-    updateAvailability(selected.id, overrideStatus, overrideNote)
+    setAvailabilityOverride({ staffId: selected.id, date: overrideDate, status: 'unavailable', note: overrideNote })
+    updateAvailability(selected.id, 'unavailable', overrideNote)
     setDialogOpen(false)
   }
 
@@ -90,14 +84,12 @@ export function StaffAvailability() {
                     </div>
                   </td>
                   {nextDays.map(d => {
-                    const override = getOverride(u.id, d)
-                    const status: AvailabilityStatus = override?.status ?? u.availability
+                    const status = getStaffStatusForDay(u.id, d)
                     const meta = STATUS_META[status]
                     return (
                       <td key={d} className="text-center px-2 py-3">
-                        <button onClick={() => openOverride(u)} className="mx-auto flex flex-col items-center gap-1 group" title={override?.note ?? undefined}>
+                        <button onClick={() => openOverride(u)} className="mx-auto flex flex-col items-center gap-1 group" title={undefined}>
                           <span className={`size-3 rounded-full ${meta.dot} group-hover:ring-2 group-hover:ring-offset-1 transition-all`} />
-                          {override?.note && <Info className="size-3 text-muted-foreground" />}
                         </button>
                       </td>
                     )
@@ -110,15 +102,15 @@ export function StaffAvailability() {
       </Card>
 
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {Object.entries(STATUS_META).map(([k, v]) => (
-          <span key={k} className="flex items-center gap-1.5"><span className={`size-2.5 rounded-full ${v.dot}`} />{v.label}</span>
+        {(Object.keys(STATUS_META) as Array<'free' | 'conflict' | 'unavailable'>).map(k => (
+          <span key={k} className="flex items-center gap-1.5"><span className={`size-2.5 rounded-full ${STATUS_META[k].dot}`} />{STATUS_META[k].label}</span>
         ))}
       </div>
 
       <h2 className="font-heading font-semibold flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground" />Current Availability</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {staffList.map(u => {
-          const meta = STATUS_META[u.availability]
+          const isUnavailable = u.availability === 'unavailable'
           return (
             <Card key={u.id} size="sm">
               <CardContent className="pt-4 pb-3">
@@ -127,7 +119,7 @@ export function StaffAvailability() {
                     <Avatar className="size-9"><AvatarFallback className="text-xs bg-primary/10 text-primary">{u.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
                     <div>
                       <p className="font-medium text-sm">{u.name}</p>
-                      <Badge variant={meta.variant} className="text-xs mt-0.5">{meta.label}</Badge>
+                      <Badge variant={isUnavailable ? 'destructive' : 'success'} className="text-xs mt-0.5">{isUnavailable ? 'Unavailable' : 'Available'}</Badge>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon-sm" onClick={() => openOverride(u)}><Pencil className="size-3.5" /></Button>
@@ -152,20 +144,10 @@ export function StaffAvailability() {
               <input type="date" value={overrideDate} onChange={e => setOverrideDate(e.target.value)}
                 className="flex h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={overrideStatus} onValueChange={v => setOverrideStatus(v as AvailabilityStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">🟢 Available</SelectItem>
-                  <SelectItem value="partial">🟡 Partial availability</SelectItem>
-                  <SelectItem value="unavailable">🔴 Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-sm text-muted-foreground">This will mark the staff member as <strong>unavailable</strong> on this date (e.g. leave, sickness). Shift conflicts are detected automatically from event assignments.</p>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Note (optional)</label>
-              <Textarea placeholder="e.g. Available mornings only" value={overrideNote} onChange={e => setOverrideNote(e.target.value)} rows={2} />
+              <Textarea placeholder="e.g. Annual leave" value={overrideNote} onChange={e => setOverrideNote(e.target.value)} rows={2} />
             </div>
           </div>
           <DialogFooter>

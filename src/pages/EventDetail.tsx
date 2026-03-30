@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import type { ConflictWarning } from '@/types'
-import { ArrowLeft, Users, MapPin, Clock, Calendar, UserPlus, UserMinus, CheckCircle2, AlertTriangle, ChevronRight, ExternalLink } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Calendar, UserPlus, UserMinus, CheckCircle2, AlertTriangle, ChevronRight, ExternalLink } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import BookingQRCode from '@/components/custom/BookingQRCode'
-import { ProgressBar } from '@/components/custom/ProgressBar'
+
 import { CollapsibleAttendance } from '@/components/custom/ColllapsibleAttendance'
 
 interface EventDetailProps {
@@ -19,7 +19,7 @@ interface EventDetailProps {
 }
 
 export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
-  const { users, events, getInstanceById, getEventByInstanceId, assignStaffToInstance, removeStaffFromInstance, currentUser, bookSessionsForCurrentUser } = useApp()
+  const { users, events, getInstanceById, getEventByInstanceId, assignStaffToInstance, removeStaffFromInstance, currentUser, bookSessionsForCurrentUser, getStaffStatusForInstance } = useApp()
   const [conflictDialog, setConflictDialog] = useState<{ open: boolean; conflicts: ConflictWarning[]; targetStaffId: string }>({ open: false, conflicts: [], targetStaffId: '' })
   const [successMsg, setSuccessMsg] = useState('')
   const [warningMsg, setWarningMsg] = useState('')
@@ -53,7 +53,7 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
       setSuccessMsg('Staff member assigned successfully.')
       setTimeout(() => setSuccessMsg(''), 3000)
     } else if (result.conflicts && result.conflicts.length > 0) {
-      const alts = availableStaff.filter(u => u && u.id !== staffId && u.availability !== 'unavailable').map(u => u!.id).slice(0, 3)
+      const alts = availableStaff.filter(u => u && u.id !== staffId && getStaffStatusForInstance(instanceId, u.id) === 'free').map(u => u!.id).slice(0, 3)
       setAltSuggestions(alts)
       setConflictDialog({ open: true, conflicts: result.conflicts, targetStaffId: staffId })
     }
@@ -154,7 +154,7 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
                   <li key={s.id} className="flex items-center gap-3 px-4 py-3">
                     <Avatar className="size-12"><AvatarFallback className="text-xs bg-primary/10 text-primary">{s.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
                     <div className="flex-1 min-w-0 text-left flex items-center gap-2">
-                      <span className={`size-2 rounded-full shrink-0 ${s.availability === 'available' ? 'bg-emerald-500' : s.availability === 'partial' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                      <span className="size-2 rounded-full shrink-0 bg-emerald-500" />
                       <p className="text-sm font-medium">{s.name}</p>
                     </div>
                     {isAdmin && instance.status === 'scheduled' && (
@@ -175,36 +175,37 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
                 <ul className="divide-y divide-border max-h-72 overflow-y-auto">
                   {availableStaff.map(s => {
                     if (!s) return null
-                    const staffInstances = events.flatMap(ev =>
+                    const staffStatus = getStaffStatusForInstance(instanceId, s.id)
+                    const conflictInstances = staffStatus === 'conflict' ? events.flatMap(ev =>
                       ev.instances
-                        .filter(inst => inst.staffAssigned.includes(s.id) && inst.date === instance.date)
+                        .filter(inst => inst.staffAssigned.includes(s.id) && inst.date === instance.date && inst.id !== instanceId)
                         .map(inst => ({ inst, ev }))
-                    )
-                    const showCount = (s.availability === 'partial' || s.availability === 'unavailable') && staffInstances.length > 0
+                    ) : []
+                    const dotColor = staffStatus === 'free' ? 'bg-emerald-500' : staffStatus === 'conflict' ? 'bg-amber-500' : 'bg-red-500'
                     return (
                       <li key={s.id} className="flex items-center gap-3 px-4 py-3">
                         <Avatar className="size-12"><AvatarFallback className="text-xs bg-secondary/40">{s.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
                         <div className="flex-1 min-w-0 text-left">
                           <div className="flex items-center gap-2">
-                            <span className={`size-2 rounded-full shrink-0 ${s.availability === 'available' ? 'bg-emerald-500' : s.availability === 'partial' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                            <span className={`size-2 rounded-full shrink-0 ${dotColor}`} />
                             <p className="text-sm font-medium">{s.name}</p>
                           </div>
-                          {showCount && (
+                          {staffStatus === 'conflict' && conflictInstances.length > 0 && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="text-xs text-blue-500 cursor-default mt-0.5 inline-block pl-4">
-                                    {staffInstances.length} event{staffInstances.length !== 1 ? 's' : ''} assigned
+                                  <span className="text-xs text-amber-500 cursor-default mt-0.5 inline-block pl-4">
+                                    {conflictInstances.length} shift conflict{conflictInstances.length !== 1 ? 's' : ''}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent side="right" className="p-0 overflow-hidden max-w-72 bg-gray-100 text-gray-900 shadow-lg rounded-xl dark:bg-gray-100 dark:text-gray-900" arrowClassName="bg-gray-100 fill-gray-100 dark:bg-gray-100 dark:fill-gray-100">
+                                <TooltipContent side="right" className="p-0 overflow-hidden max-w-72 bg-gray-100 text-gray-900 shadow-lg rounded-xl dark:bg-gray-100 dark:text-gray-900">
                                   <div className="divide-y divide-border">
-                                    {staffInstances.map(({ inst, ev }) => (
+                                    {conflictInstances.map(({ inst, ev }) => (
                                       <div key={inst.id} className="flex items-center gap-2 px-3 py-2">
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs font-medium truncate">{ev.title}</p>
                                           <p className="text-xs text-muted-foreground">
-                                            {new Date(inst.date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} &middot; {inst.startTime}&ndash;{inst.endTime}
+                                            {inst.shiftStartTime ?? inst.startTime}&ndash;{inst.shiftEndTime ?? inst.endTime} shift
                                           </p>
                                         </div>
                                         <a
@@ -223,8 +224,11 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                          {staffStatus === 'unavailable' && (
+                            <p className="text-xs text-red-500 mt-0.5 pl-4">Marked unavailable</p>
+                          )}
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => handleAssign(s.id)} className="gap-1.5 text-xs shrink-0" disabled={s.availability === 'unavailable'}>
+                        <Button variant="outline" size="sm" onClick={() => handleAssign(s.id)} className="gap-1.5 text-xs shrink-0" disabled={staffStatus === 'unavailable'}>
                           <UserPlus className="size-3.5" />Assign
                         </Button>
                       </li>

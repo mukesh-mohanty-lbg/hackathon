@@ -27,6 +27,8 @@ interface AppState {
   getInstanceById: (instanceId: string) => EventInstance | undefined
   getEventByInstanceId: (instanceId: string) => Event | undefined
   getUserById: (id: string) => User | undefined
+  getStaffStatusForInstance: (instanceId: string, staffId: string) => 'free' | 'conflict' | 'unavailable'
+  getStaffStatusForDay: (staffId: string, date: string) => 'free' | 'conflict' | 'unavailable'
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -137,6 +139,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [events])
 
   const getUserById = useCallback((id: string) => users.find(u => u.id === id), [users])
+
+  // Returns whether a staff member is free, has a shift conflict, or is manually unavailable for a given instance
+  const getStaffStatusForInstance = useCallback((instanceId: string, staffId: string): 'free' | 'conflict' | 'unavailable' => {
+    const user = users.find(u => u.id === staffId)
+    if (!user || !user.isActive) return 'unavailable'
+
+    const targetInst = events.flatMap(ev => ev.instances).find(i => i.id === instanceId)
+    if (!targetInst) return 'unavailable'
+
+    // Check manual unavailability override for that date
+    const dayOverride = availabilityOverrides.find(o =>
+      o.staffId === staffId && o.date === targetInst.date && o.status === 'unavailable'
+    )
+    if (dayOverride) return 'unavailable'
+
+    // Check global unavailability (admin-set, e.g. annual leave)
+    if (user.availability === 'unavailable') return 'unavailable'
+
+    // Check shift overlap with any other assigned instance on the same date
+    const targetShiftStart = targetInst.shiftStartTime ?? targetInst.startTime
+    const targetShiftEnd = targetInst.shiftEndTime ?? targetInst.endTime
+
+    for (const ev of events) {
+      for (const inst of ev.instances) {
+        if (inst.id === instanceId) continue
+        if (inst.date !== targetInst.date) continue
+        if (!inst.staffAssigned.includes(staffId)) continue
+        const instShiftStart = inst.shiftStartTime ?? inst.startTime
+        const instShiftEnd = inst.shiftEndTime ?? inst.endTime
+        if (targetShiftStart < instShiftEnd && targetShiftEnd > instShiftStart) {
+          return 'conflict'
+        }
+      }
+    }
+
+    return 'free'
+  }, [users, events, availabilityOverrides])
+
+  // Returns the busiest status for a staff member on a given day (across all their shifts)
+  const getStaffStatusForDay = useCallback((staffId: string, date: string): 'free' | 'conflict' | 'unavailable' => {
+    const user = users.find(u => u.id === staffId)
+    if (!user || !user.isActive) return 'unavailable'
+
+    const dayOverride = availabilityOverrides.find(o =>
+      o.staffId === staffId && o.date === date && o.status === 'unavailable'
+    )
+    if (dayOverride) return 'unavailable'
+    if (user.availability === 'unavailable') return 'unavailable'
+
+    // Find all instances assigned to this staff on this date
+    const assignedOnDay = events.flatMap(ev => ev.instances).filter(
+      i => i.staffAssigned.includes(staffId) && i.date === date && i.status === 'scheduled'
+    )
+
+    // Check if any two overlap
+    for (let i = 0; i < assignedOnDay.length; i++) {
+      for (let j = i + 1; j < assignedOnDay.length; j++) {
+        const aStart = assignedOnDay[i].shiftStartTime ?? assignedOnDay[i].startTime
+        const aEnd = assignedOnDay[i].shiftEndTime ?? assignedOnDay[i].endTime
+        const bStart = assignedOnDay[j].shiftStartTime ?? assignedOnDay[j].startTime
+        const bEnd = assignedOnDay[j].shiftEndTime ?? assignedOnDay[j].endTime
+        if (aStart < bEnd && aEnd > bStart) return 'conflict'
+      }
+    }
+
+    return 'free'
+  }, [users, events, availabilityOverrides])
 
   const assignStaffToInstance = useCallback(
     (instanceId: string, staffId: string): { success: boolean; conflicts?: ConflictWarning[] } => {
@@ -279,6 +348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       markAttendance, saveAttendance, updateInstanceStatus,
       bookSessionsForCurrentUser,
       getInstanceById, getEventByInstanceId, getUserById,
+      getStaffStatusForInstance, getStaffStatusForDay,
     }}>
       {children}
     </AppContext.Provider>

@@ -13,12 +13,14 @@ import { AttendancePage } from '@/pages/AttendancePage'
 import { EventHistory } from '@/pages/EventHistory'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { MyEventList } from '@/pages/MyEventList'
+import { StaffAllocation } from '@/pages/StaffAllocation'
 import Layout from '@/components/custom/Layout'
 
 type Page =
   | 'dashboard'
   | 'staff'
   | 'staff-availability'
+  | 'staff-allocation'
   | 'create-event'
   | 'events'
   | 'my-events'
@@ -31,6 +33,7 @@ const PAGE_TITLES: Record<Page, string> = {
   dashboard: 'Dashboard',
   staff: 'Staff Management',
   'staff-availability': 'Staff Availability',
+  'staff-allocation': 'Staff Allocation',
   'create-event': 'Create Event',
   events: 'Events',
   'my-events': 'My Events',
@@ -45,6 +48,7 @@ const PATH_TO_PAGE: Record<string, Page> = {
   '/dashboard': 'dashboard',
   '/staff': 'staff',
   '/staff-availability': 'staff-availability',
+  '/staff-allocation': 'staff-allocation',
   '/create-event': 'create-event',
   '/events': 'events',
   '/my-events': 'my-events',
@@ -58,6 +62,7 @@ const PAGE_TO_PATH: Record<Page, string> = {
   dashboard: '/dashboard',
   staff: '/staff',
   'staff-availability': '/staff-availability',
+  'staff-allocation': '/staff-allocation',
   'create-event': '/create-event',
   events: '/events',
   'my-events': '/my-events',
@@ -71,6 +76,7 @@ const ALL_PAGES: Page[] = [
   'dashboard',
   'staff',
   'staff-availability',
+  'staff-allocation',
   'create-event',
   'events',
   'my-events',
@@ -138,6 +144,8 @@ export function AppRouter() {
         return isAdmin ? <StaffManagement onNavigate={navigate} /> : null
       case 'staff-availability':
         return isAdmin ? <StaffAvailability /> : null
+      case 'staff-allocation':
+        return isAdmin ? <StaffAllocation onNavigate={navigate} /> : null
       case 'create-event':
         return <CreateEvent onNavigate={navigate} />
       case 'events':

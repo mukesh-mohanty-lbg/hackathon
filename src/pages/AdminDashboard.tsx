@@ -108,7 +108,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                       <p className="text-sm font-medium truncate">{s.name}</p>
                       {s.availabilityNote && <p className="text-xs text-muted-foreground truncate">{s.availabilityNote}</p>}
                     </div>
-                    <span className={`size-2 rounded-full ${s.availability === 'available' ? 'bg-emerald-500' : s.availability === 'partial' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                    <span className={`size-2 rounded-full ${s.availability === 'unavailable' ? 'bg-red-500' : 'bg-emerald-500'}`} />
                   </li>
                 ))}
               </ul>

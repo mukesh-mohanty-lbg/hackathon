@@ -87,11 +87,11 @@ export function StaffManagement({ onNavigate: _onNavigate }: StaffManagementProp
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {(['available', 'partial', 'unavailable'] as const).map(s => (
+        {(['available', 'unavailable'] as const).map(s => (
           <Card key={s} size="sm">
             <div className="px-4 pt-4 pb-3 flex flex-col items-center text-center">
               <p className="text-xl font-bold font-heading">{users.filter(u => u.isActive && u.availability === s).length}</p>
-              <Badge variant={s === 'available' ? 'success' : s === 'partial' ? 'warning' : 'destructive'} className="mt-1 text-xs capitalize">{s}</Badge>
+              <Badge variant={s === 'available' ? 'success' : 'destructive'} className="mt-1 text-xs capitalize">{s}</Badge>
             </div>
           </Card>
         ))}
@@ -202,6 +202,14 @@ export function StaffManagement({ onNavigate: _onNavigate }: StaffManagementProp
                   <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="text-xs capitalize gap-1">
                     {u.role === 'admin' && <ShieldCheck className="size-3" />}{u.role}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex flex-col items-center">
+                    <Badge variant={u.availability === 'unavailable' ? 'destructive' : 'success'} className="text-xs capitalize">
+                      {u.availability}
+                    </Badge>
+                    {u.availabilityNote && <p className="text-xs text-muted-foreground max-w-[120px] truncate mt-0.5">{u.availabilityNote}</p>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <Switch checked={u.isActive} onCheckedChange={() => toggleUserAccess(u.id)} aria-label={`Toggle access for ${u.name}`} />

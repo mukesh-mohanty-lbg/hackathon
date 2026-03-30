@@ -13,7 +13,9 @@ import { cn } from '@/lib/utils'
 
 export function ProfilePage() {
   const { currentUser, updateAvailability, events, availabilityOverrides, setAvailabilityOverride } = useApp()
-  const [selectedStatus, setSelectedStatus] = useState<AvailabilityStatus>(currentUser?.availability ?? 'available')
+  const [selectedStatus, setSelectedStatus] = useState<'available' | 'unavailable'>(
+    currentUser?.availability === 'unavailable' ? 'unavailable' : 'available'
+  )
   const [note, setNote] = useState(currentUser?.availabilityNote ?? '')
   const [saved, setSaved] = useState(false)
   const [blockDate, setBlockDate] = useState(new Date().toISOString().split('T')[0])
@@ -44,13 +46,13 @@ export function ProfilePage() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  const STATUS_CONFIG: Record<AvailabilityStatus, { label: string; desc: string; colorClass: string; badgeVariant: 'success' | 'warning' | 'destructive'; icon: string }> = {
+  const STATUS_CONFIG: Record<'available' | 'unavailable', { label: string; desc: string; colorClass: string; badgeVariant: 'success' | 'destructive'; icon: string }> = {
     available: { label: 'Available', desc: 'Fully available and can be assigned to events', colorClass: 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700', badgeVariant: 'success', icon: '🟢' },
-    partial: { label: 'Partially Available', desc: 'Available with some restrictions (add a note below)', colorClass: 'border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700', badgeVariant: 'warning', icon: '🟡' },
-    unavailable: { label: 'Unavailable', desc: 'Not available and should not be assigned to events', colorClass: 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700', badgeVariant: 'destructive', icon: '🔴' },
+    unavailable: { label: 'Unavailable', desc: 'Not available — use this for leave or sickness', colorClass: 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700', badgeVariant: 'destructive', icon: '🔴' },
   }
 
-  const currentConfig = STATUS_CONFIG[currentUser.availability]
+  const activeStatus: 'available' | 'unavailable' = currentUser.availability === 'unavailable' ? 'unavailable' : 'available'
+  const currentConfig = STATUS_CONFIG[activeStatus]
 
   const attendanceRows = useMemo(() => {
     if (!isIndividual) return []
@@ -187,15 +189,14 @@ export function ProfilePage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Change Status</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {(Object.keys(STATUS_CONFIG) as AvailabilityStatus[]).map(status => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(['available', 'unavailable'] as const).map(status => {
                   const config = STATUS_CONFIG[status]
                   return (
                     <button key={status} onClick={() => setSelectedStatus(status)}
                       className={cn('rounded-xl border-2 p-3 text-left transition-all',
                         selectedStatus === status ? config.colorClass + ' ring-2 ring-offset-2 ring-primary/30' : 'border-border hover:border-primary/40')}>
-                      <p className="text-sm font-medium">{config.icon} {config.label}</p>
-                    </button>
+                      <p className="text-sm font-medium">{config.icon} {config.label}</p>                        <p className="text-xs text-muted-foreground mt-0.5">{config.desc}</p>                    </button>
                   )
                 })}
               </div>
@@ -379,7 +380,7 @@ export function ProfilePage() {
                       <TableCell>{slot.slot}</TableCell>
                       <TableCell>{slot.source}</TableCell>
                       <TableCell>
-                        <Badge variant={slot.status === 'available' ? 'success' : slot.status === 'partial' ? 'warning' : 'destructive'} className="capitalize">
+                        <Badge variant={slot.status === 'unavailable' ? 'destructive' : 'success'} className="capitalize">
                           {slot.status}
                         </Badge>
                       </TableCell>

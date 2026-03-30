@@ -27,8 +27,8 @@ export function StaffDashboard({ onNavigate }: StaffDashboardProps) {
   const upcoming = myInstances.filter(i => i.date > today && i.status === 'scheduled').slice(0, 4)
   const recentDone = myInstances.filter(i => i.status === 'completed').slice(0, 3)
 
-  const AVAIL_COLOR = { available: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-700', partial: 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700', unavailable: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700' }
-  const AVAIL_BADGE: Record<string, 'success' | 'warning' | 'destructive'> = { available: 'success', partial: 'warning', unavailable: 'destructive' }
+  const AVAIL_COLOR = { available: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-700', partial: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-700', unavailable: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700' }
+  const AVAIL_BADGE: Record<string, 'success' | 'warning' | 'destructive'> = { available: 'success', partial: 'success', unavailable: 'destructive' }
 
   return (
     <div className="space-y-8">
@@ -51,7 +51,7 @@ export function StaffDashboard({ onNavigate }: StaffDashboardProps) {
             <p className="font-medium text-sm">{currentUser.name}</p>
             <div className="flex items-center gap-2">
               <Badge variant={AVAIL_BADGE[currentUser.availability]} className="text-xs capitalize">
-                {currentUser.availability === 'available' ? '🟢' : currentUser.availability === 'partial' ? '🟡' : '🔴'} {currentUser.availability}
+                {currentUser.availability === 'available' ? '🟢' : '🔴'} {currentUser.availability === 'unavailable' ? 'Unavailable' : 'Available'}
               </Badge>
               {currentUser.availabilityNote && <span className="text-xs text-muted-foreground">"{currentUser.availabilityNote}"</span>}
             </div>
