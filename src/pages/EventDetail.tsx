@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import type { ConflictWarning } from '@/types'
-import { ArrowLeft, Users, MapPin, Clock, Calendar, UserPlus, UserMinus, CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Users, MapPin, Clock, Calendar, UserPlus, UserMinus, CheckCircle2, AlertTriangle, ChevronRight, ExternalLink } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import BookingQRCode from '@/components/custom/BookingQRCode'
 import { ProgressBar } from '@/components/custom/ProgressBar'
 
@@ -17,7 +18,7 @@ interface EventDetailProps {
 }
 
 export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
-  const { users, getInstanceById, getEventByInstanceId, assignStaffToInstance, removeStaffFromInstance, currentUser, bookSessionsForCurrentUser } = useApp()
+  const { users, events, getInstanceById, getEventByInstanceId, assignStaffToInstance, removeStaffFromInstance, currentUser, bookSessionsForCurrentUser } = useApp()
   const [conflictDialog, setConflictDialog] = useState<{ open: boolean; conflicts: ConflictWarning[]; targetStaffId: string }>({ open: false, conflicts: [], targetStaffId: '' })
   const [successMsg, setSuccessMsg] = useState('')
   const [warningMsg, setWarningMsg] = useState('')
@@ -145,9 +146,9 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
                 {assignedStaff.map(s => !s ? null : (
                   <li key={s.id} className="flex items-center gap-3 px-4 py-3">
                     <Avatar className="size-12"><AvatarFallback className="text-xs bg-primary/10 text-primary">{s.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
-                    <div className="flex-1 min-w-0 text-left">
+                    <div className="flex-1 min-w-0 text-left flex items-center gap-2">
+                      <span className={`size-2 rounded-full shrink-0 ${s.availability === 'available' ? 'bg-emerald-500' : s.availability === 'partial' ? 'bg-amber-500' : 'bg-red-500'}`} />
                       <p className="text-sm font-medium">{s.name}</p>
-                      <Badge variant={s.availability === 'available' ? 'success' : s.availability === 'partial' ? 'warning' : 'destructive'} className="text-xs mt-0.5">{s.availability}</Badge>
                     </div>
                     {isAdmin && instance.status === 'scheduled' && (
                       <Button variant="ghost" size="icon-sm" onClick={() => removeStaffFromInstance(instanceId, s.id)} className="text-destructive hover:text-destructive"><UserMinus className="size-3.5" /></Button>
@@ -165,18 +166,63 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
             <CardContent className="p-0">
               {availableStaff.length === 0 ? <p className="text-sm text-muted-foreground px-6 py-4">All active staff already assigned</p> : (
                 <ul className="divide-y divide-border max-h-72 overflow-y-auto">
-                  {availableStaff.map(s => !s ? null : (
-                    <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-                      <Avatar className="size-12"><AvatarFallback className="text-xs bg-secondary/40">{s.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium">{s.name}</p>
-                        <Badge variant={s.availability === 'available' ? 'success' : s.availability === 'partial' ? 'warning' : 'destructive'} className="text-xs mt-0.5">{s.availability}</Badge>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => handleAssign(s.id)} className="gap-1.5 text-xs shrink-0" disabled={s.availability === 'unavailable'}>
-                        <UserPlus className="size-3.5" />Assign
-                      </Button>
-                    </li>
-                  ))}
+                  {availableStaff.map(s => {
+                    if (!s) return null
+                    const staffInstances = events.flatMap(ev =>
+                      ev.instances
+                        .filter(inst => inst.staffAssigned.includes(s.id) && inst.date === instance.date)
+                        .map(inst => ({ inst, ev }))
+                    )
+                    const showCount = (s.availability === 'partial' || s.availability === 'unavailable') && staffInstances.length > 0
+                    return (
+                      <li key={s.id} className="flex items-center gap-3 px-4 py-3">
+                        <Avatar className="size-12"><AvatarFallback className="text-xs bg-secondary/40">{s.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className={`size-2 rounded-full shrink-0 ${s.availability === 'available' ? 'bg-emerald-500' : s.availability === 'partial' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                            <p className="text-sm font-medium">{s.name}</p>
+                          </div>
+                          {showCount && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-xs text-blue-500 cursor-default mt-0.5 inline-block pl-4">
+                                    {staffInstances.length} event{staffInstances.length !== 1 ? 's' : ''} assigned
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="p-0 overflow-hidden max-w-72 bg-gray-100 text-gray-900 shadow-lg rounded-xl dark:bg-gray-100 dark:text-gray-900" arrowClassName="bg-gray-100 fill-gray-100 dark:bg-gray-100 dark:fill-gray-100">
+                                  <div className="divide-y divide-border">
+                                    {staffInstances.map(({ inst, ev }) => (
+                                      <div key={inst.id} className="flex items-center gap-2 px-3 py-2">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-medium truncate">{ev.title}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(inst.date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} &middot; {inst.startTime}&ndash;{inst.endTime}
+                                          </p>
+                                        </div>
+                                        <a
+                                          href={`/event-detail?instanceId=${inst.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="shrink-0 text-muted-foreground hover:text-blue-500 transition-colors"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="size-3" />
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => handleAssign(s.id)} className="gap-1.5 text-xs shrink-0" disabled={s.availability === 'unavailable'}>
+                          <UserPlus className="size-3.5" />Assign
+                        </Button>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </CardContent>

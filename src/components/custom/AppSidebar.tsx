@@ -5,7 +5,7 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useApp } from '@/store/AppContext'
-import { LayoutDashboard, Users, CalendarDays, PlusCircle, CheckSquare, History, UserCircle, LogOut, HelpingHand, CalendarCheck, Sun, Moon, HeartHandshake } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, PlusCircle, CheckSquare, History, UserCircle, LogOut, CalendarCheck, Sun, Moon } from 'lucide-react'
 import { Field, FieldLabel } from "@/components/ui/field"
 import { useEffect, useState } from 'react'
 

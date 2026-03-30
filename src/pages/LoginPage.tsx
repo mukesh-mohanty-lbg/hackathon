@@ -8,7 +8,7 @@ import { USERS } from '@/store/mockData'
 
 export function LoginPage() {
   const { login } = useApp()
-  const [email, setEmail] = useState('tomf@oyci.org.uk')
+  const [email, setEmail] = useState('admin@oyci.org.uk')
   const [password, setPassword] = useState('abc123')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
