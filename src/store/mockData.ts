@@ -12,6 +12,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2020-03-15',
+    payType: 'salaried',
+    contractedHours: 37,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u2',
@@ -22,6 +25,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2021-06-01',
+    payType: 'salaried',
+    contractedHours: 35,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u3',
@@ -33,6 +39,9 @@ export const USERS: User[] = [
     availabilityNote: 'Available mornings only this week',
     isActive: true,
     joinedDate: '2022-01-10',
+    payType: 'hourly',
+    contractedHours: 20,
+    workingDays: ['mon', 'wed', 'fri'],
   },
   {
     id: 'u4',
@@ -44,6 +53,9 @@ export const USERS: User[] = [
     availabilityNote: 'On leave until 4 April',
     isActive: true,
     joinedDate: '2021-09-20',
+    payType: 'fixed-term',
+    contractedHours: 30,
+    workingDays: ['tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u5',
@@ -54,6 +66,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2023-02-14',
+    payType: 'hourly',
+    contractedHours: 25,
+    workingDays: ['mon', 'tue', 'thu', 'fri'],
   },
   {
     id: 'u6',
@@ -64,6 +79,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: false,
     joinedDate: '2020-11-05',
+    payType: 'salaried',
+    contractedHours: 35,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u7',
@@ -74,6 +92,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2020-11-05',
+    payType: 'hourly',
+    contractedHours: 16,
+    workingDays: ['wed', 'thu', 'fri', 'sat'],
   },
 ]
 

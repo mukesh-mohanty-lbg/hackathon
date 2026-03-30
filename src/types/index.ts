@@ -2,6 +2,10 @@ export type Role = 'admin' | 'staff' | 'individual'
 
 export type AvailabilityStatus = 'available' | 'unavailable' | 'partial'
 
+export type PayType = 'salaried' | 'hourly' | 'fixed-term'
+
+export type WorkingDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+
 export interface User {
   id: string
   name: string
@@ -13,6 +17,9 @@ export interface User {
   availabilityNote?: string
   isActive: boolean
   joinedDate: string
+  payType?: PayType
+  contractedHours?: number
+  workingDays?: WorkingDay[]
 }
 
 export type EventType = 'workshop' | 'activity' | 'trip' | 'programme' | 'meeting'
