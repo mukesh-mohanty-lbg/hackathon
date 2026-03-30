@@ -48,6 +48,8 @@ export interface Event {
   createdAt: string
   tags: string[]
   ageGroup?: string
+  isPublished?: boolean
+  publishedAt?: string
 }
 
 export interface AttendeeRecord {

@@ -108,6 +108,8 @@ export const EVENTS: Event[] = [
     tags: ['holiday', 'outdoor', 'arts'],
     createdBy: 'u1',
     createdAt: fmt(addDays(today, -10)),
+    isPublished: true,
+    publishedAt: fmt(addDays(today, -8)),
     instances: [
       {
         id: 'i1a',
@@ -163,6 +165,8 @@ export const EVENTS: Event[] = [
     tags: ['drop-in', 'support'],
     createdBy: 'u2',
     createdAt: fmt(addDays(today, -30)),
+    isPublished: true,
+    publishedAt: fmt(addDays(today, -28)),
     instances: [
       {
         id: 'i2a',

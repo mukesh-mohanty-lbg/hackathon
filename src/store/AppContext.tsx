@@ -16,6 +16,8 @@ interface AppState {
   setAvailabilityOverride: (override: StaffAvailabilityOverride) => void
   addEvent: (event: Omit<Event, 'id' | 'createdAt'>) => Event
   updateEvent: (id: string, updates: Partial<Event>) => void
+  publishEvent: (id: string) => void
+  unpublishEvent: (id: string) => void
   assignStaffToInstance: (instanceId: string, staffId: string) => { success: boolean; conflicts?: ConflictWarning[] }
   removeStaffFromInstance: (instanceId: string, staffId: string) => void
   markAttendance: (instanceId: string, attendeeId: string, present: boolean) => void
@@ -112,6 +114,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateEvent = useCallback((id: string, updates: Partial<Event>) => {
     setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...updates } : e)))
+  }, [])
+
+  const publishEvent = useCallback((id: string) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, isPublished: true, publishedAt: new Date().toISOString() } : e))
+  }, [])
+
+  const unpublishEvent = useCallback((id: string) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, isPublished: false, publishedAt: undefined } : e))
   }, [])
 
   const getInstanceById = useCallback((instanceId: string): EventInstance | undefined => {
@@ -264,7 +274,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentUser, users, events, availabilityOverrides,
       login, logout, addUser, updateUser, toggleUserAccess,
       updateAvailability, setAvailabilityOverride,
-      addEvent, updateEvent,
+      addEvent, updateEvent, publishEvent, unpublishEvent,
       assignStaffToInstance, removeStaffFromInstance,
       markAttendance, saveAttendance, updateInstanceStatus,
       bookSessionsForCurrentUser,
