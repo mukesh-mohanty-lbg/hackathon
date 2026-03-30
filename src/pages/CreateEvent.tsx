@@ -127,7 +127,7 @@ export function CreateEvent({ onNavigate }: CreateEventProps) {
           <Button onClick={next} className="gap-2">Next <ChevronRight className="size-4" /></Button>
         ) : (
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => submit(false)} className="gap-2"><ChevronLeft className="size-4" />Edit</Button>
+            <Button variant="outline" onClick={() => submit(false)} className="gap-2"><ChevronLeft className="size-4" />Begin Again</Button>
             <Button onClick={() => submit(true)}><CheckCircle2 className="size-4 mr-2" />Create Event</Button>
           </div>
         )}
