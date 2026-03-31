@@ -14,14 +14,6 @@ var staffRouter = require('./routes/staff');
 
 var app = express();
 
-// Share in-memory stores across routes (for staff status lookups)
-app.locals.usersStore = usersRouter._store;
-app.locals.eventsStore = eventsRouter._store;
-// availability uses a getter because its reference can change on reassignment
-Object.defineProperty(app.locals, 'overridesStore', {
-  get: function () { return availabilityRouter._getStore(); }
-});
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');

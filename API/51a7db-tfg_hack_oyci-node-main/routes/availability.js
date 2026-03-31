@@ -1,27 +1,43 @@
 var express = require('express');
 var router = express.Router();
 
-var { AVAILABILITY_OVERRIDES } = require('../data/mockData');
+var { db } = require('../data/db');
 
-// In-memory store (seeded from mock data)
-var overrides = JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES));
+function rowToOverride(row) {
+  return {
+    staffId: row.staffId,
+    date: row.date,
+    status: row.status,
+    isFullDay: !!row.isFullDay,
+    startTime: row.startTime || undefined,
+    endTime: row.endTime || undefined,
+    note: row.note || undefined,
+  };
+}
 
 // GET /api/availability — list all overrides (optional ?staffId=u3&date=2026-04-02&dateFrom=&dateTo=)
 router.get('/', function (req, res) {
-  var result = overrides;
+  var clauses = [];
+  var params = {};
   if (req.query.staffId) {
-    result = result.filter(function (o) { return o.staffId === req.query.staffId; });
+    clauses.push('staffId = @staffId');
+    params.staffId = req.query.staffId;
   }
   if (req.query.date) {
-    result = result.filter(function (o) { return o.date === req.query.date; });
+    clauses.push('date = @date');
+    params.date = req.query.date;
   }
   if (req.query.dateFrom) {
-    result = result.filter(function (o) { return o.date >= req.query.dateFrom; });
+    clauses.push('date >= @dateFrom');
+    params.dateFrom = req.query.dateFrom;
   }
   if (req.query.dateTo) {
-    result = result.filter(function (o) { return o.date <= req.query.dateTo; });
+    clauses.push('date <= @dateTo');
+    params.dateTo = req.query.dateTo;
   }
-  res.json(result);
+  var sql = 'SELECT * FROM availability_overrides' + (clauses.length ? ' WHERE ' + clauses.join(' AND ') : '');
+  var rows = db.prepare(sql).all(params);
+  res.json(rows.map(rowToOverride));
 });
 
 // POST /api/availability — create or update an override
@@ -34,29 +50,37 @@ router.post('/', function (req, res) {
   var isFullDay = override.isFullDay !== false && !override.startTime && !override.endTime;
 
   if (isFullDay) {
-    // Remove any existing full-day override for this staff+date
-    overrides = overrides.filter(function (o) {
-      var otherIsFullDay = o.isFullDay !== false && !o.startTime && !o.endTime;
-      return !(o.staffId === override.staffId && o.date === override.date && otherIsFullDay);
-    });
-    override.isFullDay = true;
-    delete override.startTime;
-    delete override.endTime;
+    // Remove existing full-day override for this staff+date
+    db.prepare('DELETE FROM availability_overrides WHERE staffId = ? AND date = ? AND isFullDay = 1').run(override.staffId, override.date);
   } else {
     // Remove matching time-specific override
-    overrides = overrides.filter(function (o) {
-      return !(
-        o.staffId === override.staffId
-        && o.date === override.date
-        && o.startTime === override.startTime
-        && o.endTime === override.endTime
-      );
-    });
-    override.isFullDay = false;
+    db.prepare('DELETE FROM availability_overrides WHERE staffId = ? AND date = ? AND startTime = ? AND endTime = ?').run(
+      override.staffId, override.date, override.startTime, override.endTime
+    );
   }
 
-  overrides.push(override);
-  res.status(201).json(override);
+  db.prepare(`
+    INSERT INTO availability_overrides (staffId, date, status, isFullDay, startTime, endTime, note)
+    VALUES (@staffId, @date, @status, @isFullDay, @startTime, @endTime, @note)
+  `).run({
+    staffId: override.staffId,
+    date: override.date,
+    status: override.status,
+    isFullDay: isFullDay ? 1 : 0,
+    startTime: isFullDay ? null : (override.startTime || null),
+    endTime: isFullDay ? null : (override.endTime || null),
+    note: override.note || null,
+  });
+
+  res.status(201).json(rowToOverride({
+    staffId: override.staffId,
+    date: override.date,
+    status: override.status,
+    isFullDay: isFullDay ? 1 : 0,
+    startTime: isFullDay ? null : override.startTime,
+    endTime: isFullDay ? null : override.endTime,
+    note: override.note || null,
+  }));
 });
 
 // DELETE /api/availability — remove an override
@@ -65,11 +89,8 @@ router.delete('/', function (req, res) {
   if (!staffId || !date) {
     return res.status(400).json({ error: 'staffId and date are required.' });
   }
-  var before = overrides.length;
-  overrides = overrides.filter(function (o) {
-    return !(o.staffId === staffId && o.date === date);
-  });
-  res.json({ removed: before - overrides.length });
+  var info = db.prepare('DELETE FROM availability_overrides WHERE staffId = ? AND date = ?').run(staffId, date);
+  res.json({ removed: info.changes });
 });
 
 module.exports = router;

@@ -1,7 +1,10 @@
-import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
+// import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
 
-// ─── Users ────────────────────────────────────────────────────────────────────
+// ─── UI mock data is NO LONGER USED ──────────────────────────────────────────
+// All data is now fetched from the backend API.
+// Keeping empty exports so the file doesn't break if anything accidentally references it.
 
+/*
 export const USERS: User[] = [
   {
     id: 'u1',
@@ -452,3 +455,10 @@ export const AVAILABILITY_OVERRIDES: StaffAvailabilityOverride[] = [
     note: 'Available from 12:00 only',
   },
 ]
+*/
+
+// Empty exports — backend API is the single source of truth
+// export const USERS: User[] = []
+// export const CREDENTIALS: Record<string, string> = {}
+// export const EVENTS: Event[] = []
+// export const AVAILABILITY_OVERRIDES: StaffAvailabilityOverride[] = []

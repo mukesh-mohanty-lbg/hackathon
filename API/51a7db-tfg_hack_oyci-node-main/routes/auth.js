@@ -1,9 +1,8 @@
 var express = require('express');
-var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 var router = express.Router();
 
-var { USERS, CREDENTIALS } = require('../data/mockData');
+var { db, rowToUser } = require('../data/db');
 
 var JWT_SECRET = process.env.JWT_SECRET || 'oyci-secret-key';
 
@@ -15,22 +14,20 @@ router.post('/login', function (req, res) {
   }
 
   var normalizedEmail = email.trim().toLowerCase();
-  var expected = CREDENTIALS[normalizedEmail];
-  if (!expected || expected !== password) {
+  var cred = db.prepare('SELECT password FROM credentials WHERE email = ?').get(normalizedEmail);
+  if (!cred || cred.password !== password) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
-  var user = USERS.find(function (u) { return u.email === normalizedEmail; });
+  var row = db.prepare('SELECT * FROM users WHERE email = ?').get(normalizedEmail);
+  var user = rowToUser(row);
   if (!user || !user.isActive) {
     return res.status(401).json({ error: 'Account is inactive or not found.' });
   }
 
   var token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
 
-  var safeUser = Object.assign({}, user);
-  delete safeUser.password;
-
-  res.json({ token: token, user: safeUser });
+  res.json({ token: token, user: user });
 });
 
 // GET /api/auth/me  (validate token & return current user)
@@ -42,7 +39,8 @@ router.get('/me', function (req, res) {
 
   try {
     var decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
-    var user = USERS.find(function (u) { return u.id === decoded.id; });
+    var row = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    var user = rowToUser(row);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     res.json({ user: user });
   } catch (err) {
