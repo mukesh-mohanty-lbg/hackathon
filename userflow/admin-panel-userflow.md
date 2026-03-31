@@ -6,6 +6,7 @@
 |------|-------------|
 | **Admin** | Full system control — manages staff, assigns staff to events, controls availability, views service history, grants access. Also inherits all Staff capabilities. |
 | **Staff** | Frontline operator — creates/schedules events, marks attendance for assigned events, views own event history, manages own availability status. |
+| **Individual (Young Person)** | End user — browses published events, books sessions, views own bookings, tracks personal attendance history. |
 
 ---
 
@@ -21,6 +22,7 @@
 - Admin can grant/revoke staff access (activate/deactivate accounts)
 - Admin can assign roles to staff members
 - Staff cannot access Admin-only pages (Staff Management, Staff Assignment)
+- Individuals can only access public-facing pages (Events, My Events, Profile)
 
 ---
 
@@ -234,26 +236,102 @@
 
 ---
 
-## 4. Page-Level Access Matrix
+## 4. Individual (Young Person) User Flows
 
-| Page / Feature | Admin | Staff |
-|---|---|---|
-| Dashboard (full overview) | ✅ | ❌ (scoped view) |
-| Staff Management (CRUD) | ✅ | ❌ |
-| Staff Availability (all staff) | ✅ | ❌ |
-| Staff-Event Assignment | ✅ | ❌ |
-| Staff Service History (any staff) | ✅ | ❌ |
-| Staff Access Control (activate/deactivate) | ✅ | ❌ |
-| Create/Edit Events | ✅ | ✅ |
-| Delete Events | ✅ | ❌ |
-| Mark Attendance (assigned events) | ✅ | ✅ |
-| My Availability Toggle | ✅ | ✅ |
-| My Event History | ✅ | ✅ |
-| My Profile | ✅ | ✅ |
+### 4.1 Individual Dashboard (`/dashboard`)
+
+**What Individual sees:**
+- My booked upcoming sessions (next session highlighted)
+- Attendance statistics (total sessions attended, attendance rate)
+- Quick actions: Browse Events, View My Bookings
 
 ---
 
-## 5. Navigation Structure
+### 4.2 Browse & Book Events (`/events`)
+
+#### 4.2.1 Browse Published Events
+1. Individual navigates to Events page
+2. Sees all **published** events (unpublished events are hidden)
+3. Can filter by event type, date, or age group
+4. Each event card shows: Title, Date/Time, Venue, Available spots, Age group
+
+#### 4.2.2 Book a Session
+1. Individual clicks on an event to view details
+2. Sees available session instances with dates/times
+3. Selects one or more sessions to book
+4. Confirms booking → system registers the young person as an attendee
+5. Toast confirmation shown
+6. Booked session appears in "My Events"
+
+#### 4.2.3 View Event Detail (`/event-detail?instanceId=...`)
+1. Individual opens a specific session
+2. Sees: Date, Time, Venue, Staff assigned, Capacity, QR code
+3. Can book the session if not already booked
+4. If already booked, sees their booking status
+
+---
+
+### 4.3 My Events (`/my-events`)
+
+#### 4.3.1 View Booked Sessions
+1. Individual navigates to "My Events"
+2. Sees a list of all sessions they have booked
+3. Grouped by upcoming and past sessions
+4. Each entry shows: Date, Event name, Time, Venue, Attendance status
+
+---
+
+### 4.4 QR Code Check-In
+
+1. Each session has a unique QR code generated for it
+2. QR code links directly to the event detail page (`/event-detail?instanceId=...`)
+3. Staff can display the QR code at the venue for young people to scan
+4. Scanning opens the session page on the young person's device
+
+---
+
+### 4.5 Profile & Attendance History (`/profile`)
+
+#### 4.5.1 View Profile
+1. Individual sees own profile: Name, Email, Phone
+2. Attendance summary: Total sessions, Present count, Absent count, Attendance rate
+
+#### 4.5.2 View Attendance History
+1. Individual can view past sessions and their attendance record
+2. Each entry shows: Date, Event name, Attendance status (Present/Absent)
+
+---
+
+### 4.6 Event History (`/history`)
+
+1. Individual navigates to Event History
+2. Sees completed events they participated in
+3. Can review attendance records for past sessions
+
+---
+
+## 5. Page-Level Access Matrix
+
+| Page / Feature | Admin | Staff | Individual |
+|---|---|---|---|
+| Dashboard (full overview) | ✅ | ❌ (scoped view) | ❌ (own bookings) |
+| Staff Management (CRUD) | ✅ | ❌ | ❌ |
+| Staff Availability (all staff) | ✅ | ❌ | ❌ |
+| Staff-Event Assignment | ✅ | ❌ | ❌ |
+| Staff Service History (any staff) | ✅ | ❌ | ❌ |
+| Staff Access Control (activate/deactivate) | ✅ | ❌ | ❌ |
+| Create/Edit Events | ✅ | ✅ | ❌ |
+| Delete Events | ✅ | ❌ | ❌ |
+| Browse & Book Events | ✅ | ✅ | ✅ |
+| My Events (booked sessions) | ❌ | ❌ | ✅ |
+| Mark Attendance (assigned events) | ✅ | ✅ | ❌ |
+| My Availability Toggle | ✅ | ✅ | ❌ |
+| My Event History | ✅ | ✅ | ✅ |
+| My Profile | ✅ | ✅ | ✅ |
+
+---
+
+## 6. Navigation Structure
 
 ### Admin Sidebar
 ```
@@ -276,6 +354,16 @@
    ├── My Events / History
    ├── Create Event
 📋 Attendance (My Assigned)
+👤 My Profile
+```
+
+### Individual (Young Person) Sidebar
+```
+📊 Dashboard (My Bookings)
+📅 Events
+   ├── Browse Events
+   ├── My Events
+📂 Event History
 👤 My Profile
 ```
 ---

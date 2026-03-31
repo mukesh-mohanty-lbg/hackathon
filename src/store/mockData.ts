@@ -1,9 +1,4 @@
-<<<<<<< Updated upstream
 // import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
-=======
-
-import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
->>>>>>> Stashed changes
 
 // ─── UI mock data is NO LONGER USED ──────────────────────────────────────────
 // All data is now fetched from the backend API.

@@ -8,10 +8,12 @@ flowchart TD
     AuthCheck{Check Role}
     AdminDash[📊 Admin Dashboard]
     StaffDash[📊 Staff Dashboard]
+    IndivDash[📊 Individual Dashboard]
 
     Login --> AuthCheck
     AuthCheck -->|Admin| AdminDash
     AuthCheck -->|Staff| StaffDash
+    AuthCheck -->|Individual| IndivDash
 
     subgraph AdminCapabilities [Admin Capabilities]
         direction TB
@@ -31,12 +33,23 @@ flowchart TD
         AT[🟢 Availability Toggle]
     end
 
+    subgraph IndividualCapabilities [Individual Capabilities]
+        direction TB
+        BE[🔍 Browse Published Events]
+        BS[🎟️ Book Sessions]
+        ME[📂 My Booked Events]
+        AH[📊 Attendance History]
+        IP[👤 My Profile]
+    end
+
     AdminDash --> AdminCapabilities
     AdminDash --> SharedCapabilities
     StaffDash --> SharedCapabilities
+    IndivDash --> IndividualCapabilities
 
     style AdminCapabilities fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
     style SharedCapabilities fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style IndividualCapabilities fill:#d1fae5,stroke:#10b981,stroke-width:2px
     style Login fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
 ```
 
@@ -55,8 +68,10 @@ flowchart TD
     FetchRole --> RoleCheck{Role?}
     RoleCheck -->|Admin| AdminRedirect[Redirect to /admin]
     RoleCheck -->|Staff| StaffRedirect[Redirect to /admin — Scoped View]
+    RoleCheck -->|Individual| IndivRedirect[Redirect to /dashboard — Bookings View]
     AdminRedirect --> AdminDash[Admin Dashboard — Full Access]
     StaffRedirect --> StaffDash[Staff Dashboard — Own Events Only]
+    IndivRedirect --> IndivDash[Individual Dashboard — Own Bookings Only]
 ```
 
 ---
@@ -317,4 +332,132 @@ flowchart LR
 
     style Admin fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
     style Staff fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+```
+
+---
+
+## 14. Individual — Browse & Book Sessions Flow
+
+```mermaid
+flowchart TD
+    EventsPage[🔍 Browse Events Page] --> ViewPublished[View Published Events]
+    ViewPublished --> Filter[Filter by Type / Date / Age Group]
+    Filter --> SelectEvent[Select Event]
+    SelectEvent --> EventDetail[View Event Detail]
+    EventDetail --> ViewInstances[See Available Session Instances]
+    ViewInstances --> SelectSessions[Select Sessions to Book]
+    SelectSessions --> ConfirmBook{Confirm Booking?}
+    ConfirmBook -->|Yes| Booked[✅ Booking Confirmed — Toast Shown]
+    Booked --> MyEvents[Session Appears in My Events]
+    ConfirmBook -->|No| ViewInstances
+
+    EventDetail --> ViewQR[📱 View / Scan QR Code]
+    ViewQR --> QRLink[Opens Event Detail Page on Device]
+
+    style Booked fill:#d1fae5,stroke:#10b981,stroke-width:2px
+    style EventsPage fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+```
+
+---
+
+## 15. Individual — My Events & Attendance Flow
+
+```mermaid
+flowchart TD
+    MyEventsPage[📂 My Events Page] --> LoadBookings[Load Booked Sessions]
+    LoadBookings --> SplitView{View Type}
+    SplitView -->|Upcoming| UpcomingList[Upcoming Sessions List]
+    SplitView -->|Past| PastList[Past Sessions List]
+
+    UpcomingList --> SessionCard[Date | Event Name | Time | Venue]
+    PastList --> PastCard[Date | Event Name | Attendance Status]
+
+    PastList --> AttendanceStats[📊 Attendance Summary]
+    AttendanceStats --> StatsDetail[Total Sessions | Present | Absent | Rate %]
+
+    style MyEventsPage fill:#d1fae5,stroke:#10b981,stroke-width:2px
+```
+
+---
+
+## 16. Event Publishing Flow
+
+```mermaid
+flowchart TD
+    CreateEvent[Staff / Admin Creates Event] --> Draft[Event Created — Status: Unpublished]
+    Draft --> AdminReview[Admin Reviews Event]
+    AdminReview --> PublishAction{Publish?}
+    PublishAction -->|Yes| Published[✅ Event Published]
+    PublishAction -->|No| StayDraft[Event Remains Unpublished]
+
+    Published --> VisibleToAll[Event Visible to Young People on /events]
+    Published --> BookingOpen[Young People Can Book Sessions]
+
+    StayDraft --> OnlyAdminStaff[Only Visible to Admin & Staff]
+
+    AdminReview --> UnpublishAction[Unpublish Event]
+    UnpublishAction --> Hidden[Event Hidden from Young People]
+
+    style Published fill:#d1fae5,stroke:#10b981,stroke-width:2px
+    style StayDraft fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
+    style Hidden fill:#fee2e2,stroke:#ef4444,stroke-width:2px
+```
+
+---
+
+## 17. QR Code Booking Flow
+
+```mermaid
+flowchart TD
+    Staff[Staff Displays QR Code at Venue] --> QRCode[📱 QR Code — Links to /event-detail?instanceId=X]
+    QRCode --> Scan[Young Person Scans QR Code]
+    Scan --> OpenPage[Opens Event Detail Page on Phone]
+    OpenPage --> LoggedIn{Already Logged In?}
+    LoggedIn -->|Yes| ViewDetail[View Session Details]
+    LoggedIn -->|No| LoginFirst[Redirect to Login]
+    LoginFirst --> ViewDetail
+    ViewDetail --> BookSession[Book Session]
+    BookSession --> Confirmed[✅ Booking Confirmed]
+
+    style QRCode fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style Confirmed fill:#d1fae5,stroke:#10b981,stroke-width:2px
+```
+
+---
+
+## 18. Complete Navigation Map (All Roles)
+
+```mermaid
+flowchart LR
+    subgraph Admin
+        AD[Dashboard] --> AE[Events]
+        AD --> AS[Staff]
+        AD --> AA[Attendance]
+        AD --> AP[My Profile]
+        AE --> AE1[All Events]
+        AE --> AE2[Create Event]
+        AS --> AS1[Staff List]
+        AS --> AS2[Availability]
+        AS --> AS3[Assignments]
+    end
+
+    subgraph Staff
+        SD[Dashboard] --> SE[Events]
+        SD --> SA[Attendance]
+        SD --> SP[My Profile]
+        SE --> SE1[My Events / History]
+        SE --> SE2[Create Event]
+    end
+
+    subgraph Individual
+        ID[Dashboard] --> IE[Events]
+        ID --> IH[Event History]
+        ID --> IP[My Profile]
+        IE --> IE1[Browse Events]
+        IE --> IE2[My Events]
+    end
+
+    style Admin fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
+    style Staff fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style Individual fill:#d1fae5,stroke:#10b981,stroke-width:2px
 ```
