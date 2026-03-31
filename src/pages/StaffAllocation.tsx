@@ -1,14 +1,29 @@
 import { useMemo, useState } from 'react'
+import type React from 'react'
+import { useDrag, useDrop } from 'react-dnd'
 import { useApp } from '@/store/AppContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Clock, MapPin, ChevronDown, ChevronRight, Users, AlertTriangle, UserPlus, UserMinus, CheckCircle2 } from 'lucide-react'
+import { Calendar, Clock, MapPin, ChevronDown, ChevronRight, Users, AlertTriangle, UserPlus, UserMinus, CheckCircle2, GripVertical } from 'lucide-react'
 import type { ConflictWarning } from '@/types'
+
+const DRAG_TYPE = 'STAFF_CARD'
+const UNASSIGN_TYPE = 'ASSIGNED_STAFF_CHIP'
+
+interface DragItem {
+  staffId: string
+  status: 'free' | 'conflict' | 'unavailable'
+}
+
+interface UnassignDragItem {
+  staffId: string
+  instanceId: string
+}
 
 interface StaffAllocationProps {
   onNavigate: (page: string, params?: Record<string, string>) => void
@@ -90,19 +105,6 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
     const { instanceId } = conflictDialog
     setConflictDialog({ open: false, conflicts: [], targetStaffId: '', instanceId: '' })
     handleAssign(instanceId, staffId)
-  }
-
-  const handleForceAssign = () => {
-    const { instanceId } = conflictDialog
-    setConflictDialog({ open: false, conflicts: [], targetStaffId: '', instanceId: '' })
-    // Force-assign by directly calling with no conflict check — re-use removeStaffFromInstance trick:
-    // We call assignStaffToInstance; since conflicts are already known we just mark success manually
-    // The cleanest approach: call assign again (it will return conflicts again), so instead we
-    // manipulate via removeStaffFromInstance + re-assign cycle is not right either.
-    // The actual AppContext assignStaffToInstance always re-checks — use a workaround:
-    // Temporarily remove the conflicting staff assignments won't work. Instead:
-    // We just navigate to event-detail for the override button, matching EventDetail behaviour.
-    onNavigate('event-detail', { instanceId })
   }
 
   // Group instances by date for timeline rendering
@@ -259,44 +261,14 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
 
                               {/* ── Expanded content ── */}
                               <CollapsibleContent>
-                                <div className="border-t border-border px-4 py-4 space-y-3">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs font-medium text-muted-foreground">Assigned:</span>
-                                    {entry.staffAssigned.length === 0 ? (
-                                      <span className="text-xs text-muted-foreground italic">No staff assigned yet</span>
-                                    ) : (
-                                      entry.staffAssigned.map(sid => {
-                                        const u = users.find(x => x.id === sid)
-                                        const isUnavailable = getStaffStatusForInstance(entry.id, sid) === 'unavailable'
-                                        return u ? (
-                                          <div
-                                            key={sid}
-                                            className={`inline-flex items-center gap-2 text-xs rounded-md px-3 py-1.5 font-medium border ${
-                                              isUnavailable
-                                                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-                                            }`}
-                                          >
-                                            <Avatar className="size-5">
-                                              <AvatarFallback className="text-[9px] bg-current/10">
-                                                {u.name.split(' ').map(n => n[0]).join('')}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <span>{u.name}</span>
-                                            {isUnavailable && <span className="text-red-500 font-normal">(unavailable)</span>}
-                                            <button
-                                              onClick={() => handleUnassign(entry.id, sid)}
-                                              className="ml-0.5 rounded hover:bg-black/10 p-0.5 transition-colors"
-                                              title="Unassign"
-                                            >
-                                              <UserMinus className="size-3" />
-                                            </button>
-                                          </div>
-                                        ) : null
-                                      })
-                                    )}
-                                  </div>
-                                </div>
+                                <DroppableAssignedZone
+                                  entry={entry}
+                                  users={users}
+                                  getStaffStatusForInstance={getStaffStatusForInstance}
+                                  onAssign={handleAssign}
+                                  onUnassign={handleUnassign}
+                                  isSelected={isOpen}
+                                />
                               </CollapsibleContent>
                             </div>
                           </Collapsible>
@@ -345,6 +317,7 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
               />
             </div>
           )}
+          <DroppableUnassignPanel onUnassign={handleUnassign}>
           <Card>
             {!selectedEntry ? (
               <CardContent className="py-10 text-center space-y-2">
@@ -368,65 +341,22 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
                     <p className="text-sm text-muted-foreground px-4 py-4">All active staff are already assigned.</p>
                   ) : (
                     <ul className="divide-y divide-border max-h-[28rem] overflow-y-auto scrollbar-thin">
-                      {staffStatuses.map(({ staff, status }) => {
-                        const dotColor =
-                          status === 'free'
-                            ? 'bg-emerald-500'
-                            : status === 'conflict'
-                              ? 'bg-amber-500'
-                              : 'bg-red-500'
-                        const statusLabel =
-                          status === 'free' ? 'Available' : status === 'conflict' ? 'Conflict' : 'Unavailable'
-                        const statusVariant: 'success' | 'warning' | 'destructive' =
-                          status === 'free' ? 'success' : status === 'conflict' ? 'warning' : 'destructive'
-
-                        return (
-                          <li key={staff.id} className="flex items-center gap-3 px-4 py-3">
-                            <Avatar className="size-8">
-                              <AvatarFallback className="text-xs bg-secondary/40">
-                                {staff.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className={`size-2 rounded-full shrink-0 ${dotColor}`} />
-                                <p className="text-sm font-medium truncate">{staff.name}</p>
-                              </div>
-                              {status === 'conflict' && (
-                                <p className="text-xs text-amber-500 mt-0.5 pl-4">Shift conflict</p>
-                              )}
-                              {status === 'unavailable' && (
-                                <p className="text-xs text-red-500 mt-0.5 pl-4">
-                                  {staff.availabilityNote ? `"${staff.availabilityNote}"` : 'Marked unavailable'}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Badge variant={statusVariant} className="text-xs">
-                                {status === 'conflict' && <AlertTriangle className="size-3" />}
-                                {statusLabel}
-                              </Badge>
-                              {selectedEntry && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-1 text-xs"
-                                  disabled={status === 'unavailable'}
-                                  onClick={() => handleAssign(selectedEntry.id, staff.id)}
-                                >
-                                  <UserPlus className="size-3.5" />Assign
-                                </Button>
-                              )}
-                            </div>
-                          </li>
-                        )
-                      })}
+                      {staffStatuses.map(({ staff, status }) => (
+                        <DraggableStaffRow
+                          key={staff.id}
+                          staff={staff}
+                          status={status}
+                          instanceId={selectedEntry!.id}
+                          onAssign={handleAssign}
+                        />
+                      ))}
                     </ul>
                   )}
                 </CardContent>
               </>
             )}
           </Card>
+          </DroppableUnassignPanel>
         </div>
       </div>
 
@@ -491,6 +421,252 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
           </DialogFooter> */}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+// ── DraggableStaffRow ────────────────────────────────────────────────────────
+interface DraggableStaffRowProps {
+  staff: { id: string; name: string; availabilityNote?: string }
+  status: 'free' | 'conflict' | 'unavailable'
+  instanceId: string
+  onAssign: (instanceId: string, staffId: string) => void
+}
+
+function DraggableStaffRow({ staff, status, instanceId, onAssign }: DraggableStaffRowProps) {
+  const canDrag = status !== 'unavailable'
+
+  const [{ isDragging }, dragRef] = useDrag<DragItem, unknown, { isDragging: boolean }>({
+    type: DRAG_TYPE,
+    item: { staffId: staff.id, status },
+    canDrag,
+    collect: monitor => ({ isDragging: monitor.isDragging() }),
+  })
+
+  const dotColor =
+    status === 'free' ? 'bg-emerald-500' : status === 'conflict' ? 'bg-amber-500' : 'bg-red-500'
+  const statusLabel =
+    status === 'free' ? 'Available' : status === 'conflict' ? 'Conflict' : 'Unavailable'
+  const statusVariant: 'success' | 'warning' | 'destructive' =
+    status === 'free' ? 'success' : status === 'conflict' ? 'warning' : 'destructive'
+
+  return (
+    <li
+      ref={canDrag ? (dragRef as unknown as React.Ref<HTMLLIElement>) : undefined}
+      className={`flex items-center gap-3 px-4 py-3 transition-opacity ${
+        isDragging ? 'opacity-40' : 'opacity-100'
+      } ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}`}
+    >
+      <GripVertical
+        className={`size-4 shrink-0 ${
+          canDrag ? 'text-muted-foreground/60' : 'text-muted-foreground/20'
+        }`}
+      />
+      <Avatar className="size-8">
+        <AvatarFallback className="text-xs bg-secondary/40">
+          {staff.name.split(' ').map(n => n[0]).join('')}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`size-2 rounded-full shrink-0 ${dotColor}`} />
+          <p className="text-sm font-medium truncate">{staff.name}</p>
+        </div>
+        {status === 'conflict' && (
+          <p className="text-xs text-amber-500 mt-0.5 pl-4">Shift conflict · drag or assign</p>
+        )}
+        {status === 'unavailable' && (
+          <p className="text-xs text-red-500 mt-0.5 pl-4">
+            {(staff as { availabilityNote?: string }).availabilityNote
+              ? `"${(staff as { availabilityNote?: string }).availabilityNote}"`
+              : 'Marked unavailable'}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge variant={statusVariant} className="text-xs">
+          {status === 'conflict' && <AlertTriangle className="size-3" />}
+          {statusLabel}
+        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 text-xs"
+          disabled={status === 'unavailable'}
+          onClick={() => onAssign(instanceId, staff.id)}
+        >
+          <UserPlus className="size-3.5" />Assign
+        </Button>
+      </div>
+    </li>
+  )
+}
+
+// ── DroppableAssignedZone ────────────────────────────────────────────────────
+interface DroppableAssignedZoneProps {
+  entry: {
+    id: string
+    staffAssigned: string[]
+    date: string
+    startTime: string
+    endTime: string
+    shiftStartTime?: string
+    shiftEndTime?: string
+    venueOverride?: string
+    event: { title: string; venue: string; requiredStaff: number }
+  }
+  users: Array<{ id: string; name: string }>
+  getStaffStatusForInstance: (instanceId: string, staffId: string) => string
+  onAssign: (instanceId: string, staffId: string) => void
+  onUnassign: (instanceId: string, staffId: string) => void
+  isSelected: boolean
+}
+
+function DroppableAssignedZone({
+  entry, users, getStaffStatusForInstance, onAssign, onUnassign, isSelected,
+}: DroppableAssignedZoneProps) {
+  const [{ isOver, canDrop }, dropRef] = useDrop<DragItem, unknown, { isOver: boolean; canDrop: boolean }>({
+    accept: DRAG_TYPE,
+    canDrop: item => item.status !== 'unavailable' && !entry.staffAssigned.includes(item.staffId),
+    drop: item => {
+      onAssign(entry.id, item.staffId)
+    },
+    collect: monitor => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  })
+
+  const isActive = isOver && canDrop
+
+  return (
+    <div
+      ref={dropRef as unknown as React.Ref<HTMLDivElement>}
+      className={`border-t border-border px-4 py-4 space-y-3 transition-colors rounded-b-xl ${
+        isActive
+          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+          : isOver && !canDrop
+            ? 'bg-red-50 dark:bg-red-900/10'
+            : ''
+      }`}
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-medium text-muted-foreground">Assigned:</span>
+        {isActive && (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">
+            Drop to assign
+          </span>
+        )}
+        {isOver && !canDrop && (
+          <span className="text-xs text-red-500 font-medium">Cannot assign here</span>
+        )}
+        {!isActive && !isOver && entry.staffAssigned.length === 0 && (
+          <span className="text-xs text-muted-foreground italic">
+            No staff assigned yet · drag a staff card here
+          </span>
+        )}
+        {entry.staffAssigned.map(sid => {
+          const u = users.find(x => x.id === sid)
+          const isUnavailable = getStaffStatusForInstance(entry.id, sid) === 'unavailable'
+          return u ? (
+            <DraggableAssignedChip
+              key={sid}
+              staffId={sid}
+              instanceId={entry.id}
+              user={u}
+              isUnavailable={isUnavailable}
+              onUnassign={onUnassign}
+            />
+          ) : null
+        })}
+      </div>
+      {!isActive && !isOver && entry.staffAssigned.length === 0 && isSelected && (
+        <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-border py-3 text-xs text-muted-foreground gap-2">
+          <UserPlus className="size-3.5" />Drag a staff member here
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── DraggableAssignedChip ─────────────────────────────────────────────────────
+interface DraggableAssignedChipProps {
+  staffId: string
+  instanceId: string
+  user: { id: string; name: string }
+  isUnavailable: boolean
+  onUnassign: (instanceId: string, staffId: string) => void
+}
+
+function DraggableAssignedChip({ staffId, instanceId, user, isUnavailable, onUnassign }: DraggableAssignedChipProps) {
+  const [{ isDragging }, dragRef] = useDrag<UnassignDragItem, unknown, { isDragging: boolean }>({
+    type: UNASSIGN_TYPE,
+    item: { staffId, instanceId },
+    collect: monitor => ({ isDragging: monitor.isDragging() }),
+  })
+
+  return (
+    <div
+      ref={dragRef as unknown as React.Ref<HTMLDivElement>}
+      className={`inline-flex items-center gap-2 text-xs rounded-md px-2 py-1.5 font-medium border cursor-grab active:cursor-grabbing transition-opacity ${
+        isDragging ? 'opacity-40' : 'opacity-100'
+      } ${
+        isUnavailable
+          ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+      }`}
+      title="Drag to unassign"
+    >
+      <GripVertical className="size-3 shrink-0 opacity-50" />
+      <Avatar className="size-5">
+        <AvatarFallback className="text-[9px] bg-current/10">
+          {user.name.split(' ').map(n => n[0]).join('')}
+        </AvatarFallback>
+      </Avatar>
+      <span>{user.name}</span>
+      {isUnavailable && <span className="text-red-500 font-normal">(unavailable)</span>}
+      <button
+        onClick={() => onUnassign(instanceId, staffId)}
+        className="ml-0.5 rounded hover:bg-black/10 p-0.5 transition-colors"
+        title="Unassign"
+      >
+        <UserMinus className="size-3" />
+      </button>
+    </div>
+  )
+}
+
+// ── DroppableUnassignPanel ────────────────────────────────────────────────────
+interface DroppableUnassignPanelProps {
+  onUnassign: (instanceId: string, staffId: string) => void
+  children: React.ReactNode
+}
+
+function DroppableUnassignPanel({ onUnassign, children }: DroppableUnassignPanelProps) {
+  const [{ isOver, canDrop }, dropRef] = useDrop<UnassignDragItem, unknown, { isOver: boolean; canDrop: boolean }>({
+    accept: UNASSIGN_TYPE,
+    canDrop: () => true,
+    drop: item => {
+      onUnassign(item.instanceId, item.staffId)
+    },
+    collect: monitor => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  })
+
+  const isActive = isOver && canDrop
+
+  return (
+    <div ref={dropRef as unknown as React.Ref<HTMLDivElement>} className="relative">
+      {isActive && (
+        <div className="absolute inset-0 z-10 rounded-xl border-2 border-dashed border-red-400 bg-red-50/60 dark:bg-red-900/20 flex items-center justify-center pointer-events-none">
+          <span className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
+            <UserMinus className="size-4" />Drop to unassign
+          </span>
+        </div>
+      )}
+      {children}
     </div>
   )
 }

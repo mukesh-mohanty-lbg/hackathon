@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, X, RefreshCw, Loader2 } from 'lucide-react'
+import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, RefreshCw, Loader2 } from 'lucide-react'
 import { toast } from '@/components/ui/sonner'
 import { Progress } from '@/components/ui/progress'
 import type { EventInstance } from '@/types'
@@ -33,7 +33,7 @@ const eventInitials = (title: string) =>
     .join('') || 'EV'
 
 export function EventsList({ onNavigate }: EventsListProps) {
-  const { events, currentUser, bookSessionsForCurrentUser, publishEvent, unpublishEvent } = useApp()
+  const { events, currentUser, bookSessionsForCurrentUser, publishEvent } = useApp()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -45,12 +45,10 @@ export function EventsList({ onNavigate }: EventsListProps) {
   const [bookingPhone, setBookingPhone] = useState(currentUser?.phone ?? '')
   const [bookingFeedback, setBookingFeedback] = useState<{ type: 'success' | 'warning'; message: string } | null>(null)
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null)
-  const [publishingAction, setPublishingAction] = useState<'publish' | 'unpublish' | null>(null)
 
   const handlePublish = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setPublishingEventId(id)
-    setPublishingAction('publish')
     setTimeout(() => {
       try {
         publishEvent(id)
@@ -59,24 +57,6 @@ export function EventsList({ onNavigate }: EventsListProps) {
         toast.error('Failed to publish event. Please try again.')
       } finally {
         setPublishingEventId(null)
-        setPublishingAction(null)
-      }
-    }, 1200)
-  }
-
-  const handleUnpublish = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
-    setPublishingEventId(id)
-    setPublishingAction('unpublish')
-    setTimeout(() => {
-      try {
-        unpublishEvent(id)
-        toast.success('Event unpublished successfully.')
-      } catch {
-        toast.error('Failed to unpublish event. Please try again.')
-      } finally {
-        setPublishingEventId(null)
-        setPublishingAction(null)
       }
     }, 1200)
   }
@@ -325,36 +305,15 @@ export function EventsList({ onNavigate }: EventsListProps) {
                     <div>
                       { currentUser?.role === 'admin' && (
                         <div className="flex gap-2">
-                          {ev.isPublished ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1.5 text-xs text-destructive hover:text-destructive border-destructive/40 hover:border-destructive"
-                                disabled={publishingEventId === ev.id}
-                                onClick={e => handleUnpublish(e, ev.id)}
-                              >
-                                {publishingEventId === ev.id && publishingAction === 'unpublish' ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}Cancel Publish
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="gap-1.5 text-xs"
-                                disabled={publishingEventId === ev.id}
-                                onClick={e => handlePublish(e, ev.id)}
-                              >
-                                {publishingEventId === ev.id && publishingAction === 'publish' ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}Update Publish
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="gap-1.5 text-xs"
-                              disabled={publishingEventId === ev.id}
-                              onClick={e => handlePublish(e, ev.id)}
-                            >
-                              {publishingEventId === ev.id ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}Publish
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            disabled={publishingEventId === ev.id}
+                            onClick={e => handlePublish(e, ev.id)}
+                          >
+                            {publishingEventId === ev.id ? <Loader2 className="size-3.5 animate-spin" /> : ev.isPublished ? <RefreshCw className="size-3.5" /> : <Send className="size-3.5" />}
+                            {ev.isPublished ? 'Sync to Bookeo' : 'Publish to Bookeo'}
+                          </Button>
                         </div>
                       )}
                       {

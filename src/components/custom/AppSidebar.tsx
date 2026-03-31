@@ -42,11 +42,11 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
     <Sidebar collapsible="icon">
       <SidebarHeader>
       
-        <div className="flex items-center gap-1 px-2 py-2">
+        <div className="flex items-center gap-1 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <div className="flex items-center justify-center cursor-pointer" onClick={
             () => onNavigate('/')
           }>
-            <img src="./logo.png" alt="OYCI Logo" className="size-12 p-2" />
+            <img src="./logo.png" alt="OYCI Logo" className="size-8 group-data-[collapsible=icon]:size-7 p-1" />
             {/* <HelpingHand className="size-4 fill-white text-white" /> */}
           </div>
           <div className="group-data-[collapsible=icon]:hidden min-w-0">
