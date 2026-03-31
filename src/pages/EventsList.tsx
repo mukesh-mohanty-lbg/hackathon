@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, RefreshCw, Loader2 } from 'lucide-react'
+import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, RefreshCw, Loader2, Plus } from 'lucide-react'
 import { toast } from '@/components/ui/sonner'
 import { Progress } from '@/components/ui/progress'
 import type { EventInstance } from '@/types'
@@ -33,7 +33,7 @@ const eventInitials = (title: string) =>
     .join('') || 'EV'
 
 export function EventsList({ onNavigate }: EventsListProps) {
-  const { events, currentUser, bookSessionsForCurrentUser, publishEvent } = useApp()
+  const { events, currentUser, bookSessionsForCurrentUser, publishEvent, updateEvent } = useApp()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -45,6 +45,85 @@ export function EventsList({ onNavigate }: EventsListProps) {
   const [bookingPhone, setBookingPhone] = useState(currentUser?.phone ?? '')
   const [bookingFeedback, setBookingFeedback] = useState<{ type: 'success' | 'warning'; message: string } | null>(null)
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null)
+  const [addSessionDialogOpen, setAddSessionDialogOpen] = useState(false)
+  const [addSessionEventId, setAddSessionEventId] = useState<string | null>(null)
+  const [addSessionForm, setAddSessionForm] = useState({ date: '', startTime: '09:00', endTime: '17:00', shiftStartTime: '08:30', shiftEndTime: '17:30' })
+  const [addSessionErrors, setAddSessionErrors] = useState<Record<string, string>>({})
+
+  const openAddSessionDialog = (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation()
+    const targetEvent = events.find(ev => ev.id === eventId)
+    let defaultDate = new Date().toISOString().split('T')[0]
+    let defaultStartTime = '09:00'
+    let defaultEndTime = '17:00'
+    let defaultShiftStart = '08:30'
+    let defaultShiftEnd = '17:30'
+
+    if (targetEvent && targetEvent.instances.length > 0) {
+      const sorted = [...targetEvent.instances].sort((a, b) => {
+        const aMs = new Date(`${a.date}T${a.startTime}`).getTime()
+        const bMs = new Date(`${b.date}T${b.startTime}`).getTime()
+        return bMs - aMs
+      })
+      const last = sorted[0]
+      defaultStartTime = last.startTime
+      defaultEndTime = last.endTime
+      defaultShiftStart = last.shiftStartTime ?? last.startTime
+      defaultShiftEnd = last.shiftEndTime ?? last.endTime
+
+      const lastDate = new Date(`${last.date}T00:00`)
+      const recurrence = targetEvent.recurrence
+      if (recurrence === 'daily') {
+        lastDate.setDate(lastDate.getDate() + 1)
+      } else if (recurrence === 'weekly') {
+        lastDate.setDate(lastDate.getDate() + 7)
+      } else if (recurrence === 'monthly') {
+        lastDate.setMonth(lastDate.getMonth() + 1)
+      } else {
+        // one-time: use the day after the last session
+        lastDate.setDate(lastDate.getDate() + 1)
+      }
+      const y = lastDate.getFullYear()
+      const m = String(lastDate.getMonth() + 1).padStart(2, '0')
+      const d = String(lastDate.getDate()).padStart(2, '0')
+      defaultDate = `${y}-${m}-${d}`
+    }
+
+    setAddSessionEventId(eventId)
+    setAddSessionForm({ date: defaultDate, startTime: defaultStartTime, endTime: defaultEndTime, shiftStartTime: defaultShiftStart, shiftEndTime: defaultShiftEnd })
+    setAddSessionErrors({})
+    setAddSessionDialogOpen(true)
+  }
+
+  const handleAddSessionSave = () => {
+    const errs: Record<string, string> = {}
+    if (!addSessionForm.date) errs.date = 'Date required'
+    if (addSessionForm.startTime >= addSessionForm.endTime) errs.time = 'End must be after start'
+    setAddSessionErrors(errs)
+    if (Object.keys(errs).length > 0) return
+
+    const targetEvent = events.find(e => e.id === addSessionEventId)
+    if (!targetEvent) return
+
+    const newInstance: EventInstance = {
+      id: `i_${Date.now()}`,
+      eventId: targetEvent.id,
+      date: addSessionForm.date,
+      startTime: addSessionForm.startTime,
+      endTime: addSessionForm.endTime,
+      shiftStartTime: addSessionForm.shiftStartTime || undefined,
+      shiftEndTime: addSessionForm.shiftEndTime || undefined,
+      staffAssigned: [],
+      maxAttendees: targetEvent.maxAttendees,
+      attendees: [],
+      status: 'scheduled',
+    }
+
+    updateEvent(targetEvent.id, { instances: [...targetEvent.instances, newInstance] })
+    toast.success('Session added successfully.')
+    setAddSessionDialogOpen(false)
+    setAddSessionEventId(null)
+  }
 
   const handlePublish = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -266,7 +345,7 @@ export function EventsList({ onNavigate }: EventsListProps) {
                   </div>
                   <div className="flex items-end justify-between gap-2 mt-3">
 
-                  {upcoming.length > 0 && (
+                  {(upcoming.length > 0 || completed.length > 0 || currentUser?.role === 'admin') && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {completed.map(i => {
                         const pct = i.maxAttendees > 0 ? Math.round((i.attendees.length / i.maxAttendees) * 100) : 0
@@ -300,6 +379,15 @@ export function EventsList({ onNavigate }: EventsListProps) {
                           </button>
                         )
                       })}
+                      {currentUser?.role === 'admin' && (
+                        <button
+                          onClick={e => openAddSessionDialog(e, ev.id)}
+                          className="flex flex-col gap-1 text-xs rounded-lg border border-dashed border-zinc-400 bg-muted/30 hover:bg-accent px-3 py-2.5 transition-colors hover:cursor-pointer items-center justify-center min-w-[80px]"
+                        >
+                          <Plus className="size-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Add Session</span>
+                        </button>
+                      )}
                     </div>
                   )}
                     <div>
@@ -345,6 +433,45 @@ export function EventsList({ onNavigate }: EventsListProps) {
           })}
         </div>
       )}
+
+      <Dialog open={addSessionDialogOpen} onOpenChange={setAddSessionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Session</DialogTitle>
+            <DialogDescription>Add a new session to this event.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="add-session-date">Date {addSessionErrors.date && <span className="text-destructive text-xs ml-1">{addSessionErrors.date}</span>}</Label>
+              <Input id="add-session-date" type="date" value={addSessionForm.date} onChange={e => setAddSessionForm(f => ({ ...f, date: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-session-start">Event Start {addSessionErrors.time && <span className="text-destructive text-xs ml-1">{addSessionErrors.time}</span>}</Label>
+                <Input id="add-session-start" type="time" value={addSessionForm.startTime} onChange={e => setAddSessionForm(f => ({ ...f, startTime: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-session-end">Event End</Label>
+                <Input id="add-session-end" type="time" value={addSessionForm.endTime} onChange={e => setAddSessionForm(f => ({ ...f, endTime: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-session-shift-start">Shift Start</Label>
+                <Input id="add-session-shift-start" type="time" value={addSessionForm.shiftStartTime} onChange={e => setAddSessionForm(f => ({ ...f, shiftStartTime: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-session-shift-end">Shift End</Label>
+                <Input id="add-session-shift-end" type="time" value={addSessionForm.shiftEndTime} onChange={e => setAddSessionForm(f => ({ ...f, shiftEndTime: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddSessionDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddSessionSave}>Save Session</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
         <DialogContent>

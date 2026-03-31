@@ -198,7 +198,11 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
                                     {conflictInstances.length} shift conflict{conflictInstances.length !== 1 ? 's' : ''}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent side="right" className="p-0 overflow-hidden max-w-72 bg-gray-100 text-gray-900 shadow-lg rounded-xl dark:bg-gray-100 dark:text-gray-900">
+                                <TooltipContent
+                                  side="right"
+                                  className="max-w-72 overflow-hidden rounded-xl bg-gray-100 p-0 text-gray-900 shadow-lg dark:bg-gray-100 dark:text-gray-900"
+                                  arrowClassName="bg-gray-100 fill-gray-100 dark:bg-gray-100 dark:fill-gray-100"
+                                >
                                   <div className="divide-y divide-border">
                                     {conflictInstances.map(({ inst, ev }) => (
                                       <div key={inst.id} className="flex items-center gap-2 px-3 py-2">
