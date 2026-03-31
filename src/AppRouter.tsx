@@ -32,7 +32,7 @@ type Page =
 const PAGE_TITLES: Record<Page, string> = {
   dashboard: 'Dashboard',
   staff: 'Staff Management',
-  'staff-availability': 'Staff Availability',
+  'staff-availability': 'Staff Reporting',
   'staff-allocation': 'Staff Allocation',
   'create-event': 'Create Event',
   events: 'Events',

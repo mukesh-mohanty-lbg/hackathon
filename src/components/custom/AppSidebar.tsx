@@ -21,7 +21,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   const adminItems = [
     { page: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
     { page: 'staff', label: 'Staff Management', Icon: Users },
-    { page: 'staff-availability', label: 'Staff Availability', Icon: CalendarCheck },
+    { page: 'staff-availability', label: 'Staff Reporting', Icon: CalendarCheck },
     { page: 'staff-allocation', label: 'Staff Allocation', Icon: UserCog },
   ]
   const sharedItems = [

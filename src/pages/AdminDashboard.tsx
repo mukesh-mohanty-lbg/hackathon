@@ -115,7 +115,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </CardContent>
           </Card>
           <Button variant="outline" className="w-full gap-2" onClick={() => onNavigate('staff-availability')}>
-            <CalendarDays className="size-4" />Staff Availability
+            <CalendarDays className="size-4" />Staff Reporting
           </Button>
         </div>
       </div>
