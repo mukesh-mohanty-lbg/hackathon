@@ -439,8 +439,8 @@ export function EventsList({ onNavigate }: EventsListProps) {
                             disabled={publishingEventId === ev.id}
                             onClick={e => handlePublish(e, ev.id)}
                           >
-                            {publishingEventId === ev.id ? <Loader2 className="size-3.5 animate-spin" /> : ev.isPublished ? <RefreshCw className="size-3.5" /> : <Send className="size-3.5" />}
-                            {ev.isPublished ? 'Sync to Bookeo' : 'Publish to Bookeo'}
+                            {publishingEventId === ev.id ? <Loader2 className="size-3.5 animate-spin" /> : ev.isPublished ? <RefreshCw className="size-3.5" /> : <RefreshCw className="size-3.5" />}
+                            {ev.isPublished ? 'Sync to Bookeo' : 'Sync to Bookeo'}
                           </Button>
                         </div>
                       )}
