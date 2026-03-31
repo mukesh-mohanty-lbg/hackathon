@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, RefreshCw, Loader2, Plus } from 'lucide-react'
+import { ChevronRight, TrendingUp, Calendar, CheckCircle2, Clock, Search, PlusCircle, Info, Send, RefreshCw, Loader2, Plus, XCircle } from 'lucide-react'
 import { toast } from '@/components/ui/sonner'
 import { Progress } from '@/components/ui/progress'
 import type { EventInstance } from '@/types'
@@ -123,6 +123,17 @@ export function EventsList({ onNavigate }: EventsListProps) {
     toast.success('Session added successfully.')
     setAddSessionDialogOpen(false)
     setAddSessionEventId(null)
+  }
+
+  const handleCancelSession = (e: React.MouseEvent, eventId: string, instanceId: string) => {
+    e.stopPropagation()
+    const targetEvent = events.find(ev => ev.id === eventId)
+    if (!targetEvent) return
+    const updatedInstances = targetEvent.instances.map(i =>
+      i.id === instanceId ? { ...i, status: 'cancelled' as const } : i
+    )
+    updateEvent(eventId, { instances: updatedInstances })
+    toast.success('Session cancelled.')
   }
 
   const handlePublish = (e: React.MouseEvent, id: string) => {
@@ -288,6 +299,7 @@ export function EventsList({ onNavigate }: EventsListProps) {
           {filtered.map(ev => {
             const today = new Date().toISOString().split('T')[0]
             const upcoming = ev.instances.filter(i => i.date >= today && i.status === 'scheduled').sort((a, b) => a.date.localeCompare(b.date))
+            const cancelledFuture = ev.instances.filter(i => i.date >= today && i.status === 'cancelled').sort((a, b) => a.date.localeCompare(b.date))
             const completed = ev.instances.filter(i => i.status === 'completed')
             const nonCompleted = ev.instances.filter(i => i.status !== 'completed')
             const allNonCompletedBooked = currentUser?.role === 'individual'
@@ -366,17 +378,47 @@ export function EventsList({ onNavigate }: EventsListProps) {
                       {upcoming.map(i => {
                         const pct = i.maxAttendees > 0 ? Math.round((i.attendees.length / i.maxAttendees) * 100) : 0
                         return (
-                          <button key={i.id} onClick={e => { e.stopPropagation(); onNavigate('event-detail', { instanceId: i.id }) }}
+                          <div key={i.id} onClick={e => { e.stopPropagation(); onNavigate('event-detail', { instanceId: i.id }) }}
                             className={`flex flex-col gap-1 text-xs rounded-lg border border-zinc-300 bg-muted/60 hover:bg-accent px-3 py-2.5 transition-colors hover:cursor-pointer ${currentUser?.role === 'individual' && i.attendees.some(a => a.youngPersonId === currentUser.id) ? 'border-b-4 border-b-primary' : ''}`}>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="size-4" />
-                              <Calendar className="size-3" />{new Date(i.date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} {i.startTime}-{i.endTime}<ChevronRight className="size-3" />
+                            <div className="flex items-center gap-1.5 justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-4" />
+                                <Calendar className="size-3" />{new Date(i.date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} {i.startTime}-{i.endTime}<ChevronRight className="size-3" />
+                              </div>
+                              {currentUser?.role === 'admin' && (
+                                <button
+                                  onClick={e => handleCancelSession(e, ev.id, i.id)}
+                                  className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
+                                  title="Cancel session"
+                                >
+                                  <XCircle className="size-3.5" />
+                                </button>
+                              )}
                             </div>
                             <div className="w-full space-y-0.5 mt-2">
                               <Progress value={pct} className="h-1.5" />
                               <p className="text-[10px] text-muted-foreground text-right">{i.attendees.length}/{i.maxAttendees} seats occupied</p>
                             </div>
-                          </button>
+                          </div>
+                        )
+                      })}
+                      {cancelledFuture.map(i => {
+                        const pct = i.maxAttendees > 0 ? Math.round((i.attendees.length / i.maxAttendees) * 100) : 0
+                        return (
+                          <div key={i.id}
+                            className="flex flex-col gap-1 text-xs rounded-lg border border-zinc-300 bg-muted/30 px-3 py-2.5 opacity-50 cursor-not-allowed">
+                            <div className="flex items-center gap-1.5 justify-between">
+                              <div className="flex items-center gap-1.5 line-through text-muted-foreground">
+                                <XCircle className="size-4" />
+                                <Calendar className="size-3" />{new Date(i.date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} {i.startTime}-{i.endTime}
+                              </div>
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">Cancelled</Badge>
+                            </div>
+                            <div className="w-full space-y-0.5 mt-2">
+                              <Progress value={pct} className="h-1.5" />
+                              <p className="text-[10px] text-muted-foreground text-right">{i.attendees.length}/{i.maxAttendees} seats</p>
+                            </div>
+                          </div>
                         )
                       })}
                       {currentUser?.role === 'admin' && (
