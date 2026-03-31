@@ -381,9 +381,9 @@ export const EVENTS: Event[] = [
         eventId: 'e6',
         // same day as i2b (Weekly Youth Drop-In) — u3 + u4 assigned
         date: fmt(today),
-        startTime: '10:00',
+        startTime: '08:00',
         endTime: '12:30',
-        shiftStartTime: '09:30',
+        shiftStartTime: '07:30',
         shiftEndTime: '13:00',
         staffAssigned: ['u3', 'u4'],
         maxAttendees: 12,

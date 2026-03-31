@@ -12,6 +12,17 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Calendar, Clock, MapPin, ChevronDown, ChevronRight, Users, AlertTriangle, UserPlus, UserMinus, CheckCircle2, GripVertical } from 'lucide-react'
 import type { ConflictWarning } from '@/types'
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function timeToMins(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + (m ?? 0)
+}
+function instShiftHrs(inst: { shiftStartTime?: string; shiftEndTime?: string; startTime: string; endTime: string }): number {
+  const s = inst.shiftStartTime ?? inst.startTime
+  const e = inst.shiftEndTime ?? inst.endTime
+  return Math.max(0, (timeToMins(e) - timeToMins(s)) / 60)
+}
+
 const DRAG_TYPE = 'STAFF_CARD'
 const UNASSIGN_TYPE = 'ASSIGNED_STAFF_CHIP'
 
@@ -51,6 +62,30 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
     [users]
   )
 
+  // Week bounds for utilisation calculation
+  const { weekStart, weekEnd } = useMemo(() => {
+    const d = new Date()
+    const day = d.getDay() === 0 ? 6 : d.getDay() - 1
+    const mon = new Date(d); mon.setDate(d.getDate() - day)
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+    return { weekStart: mon.toISOString().split('T')[0], weekEnd: sun.toISOString().split('T')[0] }
+  }, [])
+
+  // Weekly utilisation per staff member: shift hours this week / contracted hours
+  const utilisationMap = useMemo(() => {
+    const allInst = events.flatMap(ev => ev.instances)
+    const map: Record<string, number | null> = {}
+    for (const u of activeStaff) {
+      const weekHrs = allInst
+        .filter(i => i.staffAssigned.includes(u.id) && i.date >= weekStart && i.date <= weekEnd)
+        .reduce((s, i) => s + instShiftHrs(i), 0)
+      map[u.id] = (u.contractedHours ?? 0) > 0
+        ? Math.round((weekHrs / u.contractedHours!) * 100)
+        : null
+    }
+    return map
+  }, [activeStaff, events, weekStart, weekEnd])
+
   // Only one instance can be expanded at a time
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -71,9 +106,10 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
       .map(s => ({
         staff: s,
         status: getStaffStatusForInstance(selectedEntry.id, s.id) as 'free' | 'conflict' | 'unavailable',
+        utilisationPct: utilisationMap[s.id] ?? null,
       }))
       .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
-  }, [selectedEntry, activeStaff, getStaffStatusForInstance])
+  }, [selectedEntry, activeStaff, getStaffStatusForInstance, utilisationMap])
 
   const handleToggle = (id: string) => {
     setExpandedId(prev => (prev === id ? null : id))
@@ -341,13 +377,14 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
                     <p className="text-sm text-muted-foreground px-4 py-4">All active staff are already assigned.</p>
                   ) : (
                     <ul className="divide-y divide-border max-h-[28rem] overflow-y-auto scrollbar-thin">
-                      {staffStatuses.map(({ staff, status }) => (
+                      {staffStatuses.map(({ staff, status, utilisationPct }) => (
                         <DraggableStaffRow
                           key={staff.id}
                           staff={staff}
                           status={status}
                           instanceId={selectedEntry!.id}
                           onAssign={handleAssign}
+                          utilisationPct={utilisationPct}
                         />
                       ))}
                     </ul>
@@ -431,9 +468,10 @@ interface DraggableStaffRowProps {
   status: 'free' | 'conflict' | 'unavailable'
   instanceId: string
   onAssign: (instanceId: string, staffId: string) => void
+  utilisationPct: number | null
 }
 
-function DraggableStaffRow({ staff, status, instanceId, onAssign }: DraggableStaffRowProps) {
+function DraggableStaffRow({ staff, status, instanceId, onAssign, utilisationPct }: DraggableStaffRowProps) {
   const canDrag = status !== 'unavailable'
 
   const [{ isDragging }, dragRef] = useDrag<DragItem, unknown, { isDragging: boolean }>({
@@ -481,6 +519,19 @@ function DraggableStaffRow({ staff, status, instanceId, onAssign }: DraggableSta
               ? `"${(staff as { availabilityNote?: string }).availabilityNote}"`
               : 'Marked unavailable'}
           </p>
+        )}
+        {utilisationPct !== null && (
+          <div className="flex items-center gap-1.5 mt-1 pl-4">
+            <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${
+                  utilisationPct >= 90 ? 'bg-red-500' : utilisationPct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(utilisationPct, 100)}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">{utilisationPct}% utilised</span>
+          </div>
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0">

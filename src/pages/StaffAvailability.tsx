@@ -5,12 +5,13 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 import type { WorkingDay } from '@/types'
 import {
-  BarChart2, Briefcase, CalendarDays,
+  BarChart2, Briefcase, CalendarDays, Download,
   Clock, TrendingUp, Users, UserCheck, UserX, Calendar,
 } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const DAY_LABELS: Record<WorkingDay, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }
@@ -193,8 +194,39 @@ export function StaffAvailability() {
       {/* Staff breakdown table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><BarChart2 className="size-4 text-muted-foreground" />Staff Hours Breakdown</CardTitle>
-          <CardDescription>Click a row to see individual shift details</CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2"><BarChart2 className="size-4 text-muted-foreground" />Staff Hours Breakdown</CardTitle>
+              <CardDescription>Click a row to see individual shift details</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs" onClick={() => {
+              const rows = [
+                ['Name', 'Role', 'Pay Type', 'Contracted Hrs/Wk', 'Total Shift Hrs', 'Completed Hrs', 'Upcoming Hrs', 'Sessions', 'Utilisation %', 'Status'],
+                ...staffStats.map(r => [
+                  r.user.name,
+                  r.user.role,
+                  r.user.payType ?? '',
+                  r.user.contractedHours ?? '',
+                  r.totalShiftHrs.toFixed(1),
+                  r.completedHrs.toFixed(1),
+                  r.upcomingHrs.toFixed(1),
+                  r.assigned.length,
+                  r.utilisationPct !== null ? r.utilisationPct : '',
+                  r.user.availability,
+                ]),
+              ]
+              const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `staff-hours-${periodLabel.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.csv`
+              a.click()
+              URL.revokeObjectURL(url)
+            }}>
+              <Download className="size-3.5" />Export CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>

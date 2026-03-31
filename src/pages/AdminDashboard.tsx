@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import React from 'react'
 import { useApp } from '@/store/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -76,7 +77,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">No events scheduled for today</CardContent></Card>
           ) : (
             <div className="space-y-3">
-              {todayInstances.map(inst => <InstanceCard key={inst.id} instance={inst} events={events} onNavigate={onNavigate} />)}
+              {todayInstances.map(inst => {
+                const now = new Date()
+                const nowMins = now.getHours() * 60 + now.getMinutes()
+                const [sh, sm] = inst.startTime.split(':').map(Number)
+                const [eh, em] = inst.endTime.split(':').map(Number)
+                const isLive = nowMins >= sh * 60 + sm && nowMins < eh * 60 + em && inst.status === 'scheduled'
+                return <InstanceCard key={inst.id} instance={inst} events={events} onNavigate={onNavigate} isLive={isLive} />
+              })}
             </div>
           )}
           {upcomingInstances.length > 0 && (
@@ -148,11 +156,12 @@ function StatCard({ label, value, icon, color, sub }: { label: string; value: st
 
 const TYPE_BADGE: Record<string, string> = { workshop: 'info', activity: 'success', trip: 'warning', programme: 'default', meeting: 'secondary' }
 
-function InstanceCard({ instance, events, onNavigate, compact = false }: {
+function InstanceCard({ instance, events, onNavigate, compact = false, isLive = false }: {
   instance: EventInstance & { eventTitle: string; eventType: string }
   events: Event[]
   onNavigate: (page: string, params?: Record<string, string>) => void
   compact?: boolean
+  isLive?: boolean
 }) {
   const ev = events.find(e => e.id === instance.eventId)
   const understaffed = ev && instance.staffAssigned.length < ev.requiredStaff
@@ -179,6 +188,15 @@ function InstanceCard({ instance, events, onNavigate, compact = false }: {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
+            {isLive && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                </span>
+                LIVE
+              </span>
+            )}
             <Badge variant={TYPE_BADGE[instance.eventType] as 'info'} className="text-xs capitalize">{instance.eventType}</Badge>
             {understaffed && <Badge variant="warning" className="text-xs">Understaffed</Badge>}
             {instance.status === 'completed' && <Badge variant="success" className="text-xs">Completed</Badge>}
