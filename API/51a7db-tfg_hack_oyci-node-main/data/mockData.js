@@ -1,0 +1,239 @@
+// ─── Mock Data (mirrors UI mockData.ts) ──────────────────────────────────────
+
+const today = new Date();
+const fmt = (d) => d.toISOString().split('T')[0];
+const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
+
+const USERS = [
+  {
+    id: 'u1', name: 'Sarah Mitchell', email: 'admin@oyci.org.uk', role: 'admin',
+    phone: '07700 900001', availability: 'available', isActive: true,
+    joinedDate: '2020-03-15', payType: 'salaried', contractedHours: 37,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  },
+  {
+    id: 'u2', name: 'Jamie Robertson', email: 'staff@oyci.org.uk', role: 'staff',
+    phone: '07700 900002', availability: 'available', isActive: true,
+    joinedDate: '2021-06-01', payType: 'salaried', contractedHours: 35,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  },
+  {
+    id: 'u3', name: 'Priya Sharma', email: 'priya@oyci.org.uk', role: 'staff',
+    phone: '07700 900003', availability: 'partial',
+    availabilityNote: 'Available mornings only this week', isActive: true,
+    joinedDate: '2022-01-10', payType: 'hourly', contractedHours: 20,
+    workingDays: ['mon', 'wed', 'fri'],
+  },
+  {
+    id: 'u4', name: 'Callum Baxter', email: 'callum@oyci.org.uk', role: 'staff',
+    phone: '07700 900004', availability: 'unavailable',
+    availabilityNote: 'On leave until 4 April', isActive: true,
+    joinedDate: '2021-09-20', payType: 'fixed-term', contractedHours: 30,
+    workingDays: ['tue', 'wed', 'thu', 'fri'],
+  },
+  {
+    id: 'u5', name: 'Aisha Ndiaye', email: 'aisha@oyci.org.uk', role: 'staff',
+    phone: '07700 900005', availability: 'available', isActive: true,
+    joinedDate: '2023-02-14', payType: 'hourly', contractedHours: 25,
+    workingDays: ['mon', 'tue', 'thu', 'fri'],
+  },
+  {
+    id: 'u6', name: 'Tom Wallace', email: 'tom@oyci.org.uk', role: 'staff',
+    phone: '07700 900006', availability: 'available', isActive: false,
+    joinedDate: '2020-11-05', payType: 'salaried', contractedHours: 35,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  },
+  {
+    id: 'u7', name: 'Tom Ford', email: 'tomf@oyci.org.uk', role: 'individual',
+    phone: '07700900009', availability: 'available', isActive: true,
+    joinedDate: '2020-11-05', payType: 'hourly', contractedHours: 16,
+    workingDays: ['wed', 'thu', 'fri', 'sat'],
+  },
+];
+
+const CREDENTIALS = {
+  'admin@oyci.org.uk': 'abc123',
+  'staff@oyci.org.uk': 'abc123',
+  'priya@oyci.org.uk': 'abc123',
+  'callum@oyci.org.uk': 'abc123',
+  'aisha@oyci.org.uk': 'abc123',
+  'tom@oyci.org.uk': 'abc123',
+  'tomf@oyci.org.uk': 'abc123',
+};
+
+const EVENTS = [
+  {
+    id: 'e1', title: 'Summer Holiday Programme',
+    description: 'A week-long holiday programme for young people aged 8–16, including outdoor activities, arts & crafts, and team-building exercises.',
+    type: 'programme', venue: 'Alloa Community Centre', requiredStaff: 3, maxAttendees: 24,
+    recurrence: 'none', ageGroup: '8–16', tags: ['holiday', 'outdoor', 'arts'],
+    createdBy: 'u1', createdAt: fmt(addDays(today, -10)), isPublished: true, publishedAt: fmt(addDays(today, -8)),
+    instances: [
+      {
+        id: 'i1a', eventId: 'e1', date: fmt(addDays(today, 2)),
+        startTime: '09:00', endTime: '16:00', shiftStartTime: '08:30', shiftEndTime: '16:30',
+        staffAssigned: ['u2', 'u3'], maxAttendees: 24, status: 'scheduled',
+        attendees: [
+          { youngPersonId: 'I10001', name: 'Liam Hendry', present: null },
+          { youngPersonId: 'I10002', name: 'Ella McFarlane', present: null },
+          { youngPersonId: 'I10003', name: 'Noah Stirling', present: null },
+          { youngPersonId: 'I10004', name: 'Mia Donald', present: null },
+          { youngPersonId: 'I10005', name: 'Oliver Grant', present: null },
+          { youngPersonId: 'I10006', name: 'Isla Ferguson', present: null },
+        ],
+      },
+      {
+        id: 'i1b', eventId: 'e1', date: fmt(addDays(today, 3)),
+        startTime: '09:00', endTime: '16:00', shiftStartTime: '08:30', shiftEndTime: '16:30',
+        staffAssigned: ['u2', 'u5'], maxAttendees: 24, status: 'scheduled',
+        attendees: [
+          { youngPersonId: 'I10001', name: 'Liam Hendry', present: null },
+          { youngPersonId: 'I10002', name: 'Ella McFarlane', present: null },
+          { youngPersonId: 'I10007', name: 'Finn Campbell', present: null },
+          { youngPersonId: 'I10008', name: 'Zoe Watson', present: null },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'e2', title: 'Weekly Youth Drop-In',
+    description: 'Open drop-in session every Wednesday for young people to socialise, get support, and access resources.',
+    type: 'activity', venue: 'OYCI Hub, Clackmannan Road', requiredStaff: 2, maxAttendees: 30,
+    recurrence: 'weekly', ageGroup: '11–18', tags: ['drop-in', 'support'],
+    createdBy: 'u2', createdAt: fmt(addDays(today, -30)), isPublished: true, publishedAt: fmt(addDays(today, -28)),
+    instances: [
+      {
+        id: 'i2a', eventId: 'e2', date: fmt(addDays(today, -7)),
+        startTime: '15:00', endTime: '18:00', staffAssigned: ['u2', 'u3'],
+        maxAttendees: 30, status: 'completed',
+        attendees: [
+          { youngPersonId: 'I010009', name: 'Jake Muir', present: true },
+          { youngPersonId: 'I010010', name: 'Sofia Reid', present: true },
+          { youngPersonId: 'I010011', name: 'Ben Clark', present: false },
+          { youngPersonId: 'I010012', name: 'Amara Scott', present: true },
+          { youngPersonId: 'I010013', name: 'Harry Thomson', present: true },
+        ],
+      },
+      {
+        id: 'i2b', eventId: 'e2', date: fmt(today),
+        startTime: '15:00', endTime: '18:00', shiftStartTime: '14:30', shiftEndTime: '18:30',
+        staffAssigned: ['u2'], maxAttendees: 30, status: 'scheduled',
+        attendees: [
+          { youngPersonId: 'I010009', name: 'Jake Muir', present: null },
+          { youngPersonId: 'I010010', name: 'Sofia Reid', present: null },
+          { youngPersonId: 'I010012', name: 'Amara Scott', present: null },
+          { youngPersonId: 'I010014', name: 'Lily Brown', present: null },
+          { youngPersonId: 'I010015', name: 'Ryan Young', present: null },
+          { youngPersonId: 'I010016', name: 'Chloe Walker', present: null },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'e3', title: 'Leadership Workshop',
+    description: 'A skills workshop helping young people develop leadership skills, public speaking, and confidence.',
+    type: 'workshop', venue: 'Alloa Academy', requiredStaff: 2, maxAttendees: 15,
+    recurrence: 'none', ageGroup: '14–18', tags: ['leadership', 'skills', 'confidence'],
+    createdBy: 'u1', createdAt: fmt(addDays(today, -5)),
+    instances: [
+      {
+        id: 'i3a', eventId: 'e3', date: fmt(addDays(today, 7)),
+        startTime: '10:00', endTime: '14:00', shiftStartTime: '09:30', shiftEndTime: '14:30',
+        staffAssigned: [], maxAttendees: 15, status: 'scheduled',
+        attendees: [
+          { youngPersonId: 'I010017', name: 'Grace Hamilton', present: null },
+          { youngPersonId: 'I010018', name: 'Ethan Ross', present: null },
+          { youngPersonId: 'I010019', name: 'Niamh Murphy', present: null },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'e4', title: 'Countryside Day Trip',
+    description: 'A day out to the Ochil Hills for orienteering, nature exploration, and group activities.',
+    type: 'trip', venue: 'Ochil Hills – Hillfoots', requiredStaff: 4, maxAttendees: 20,
+    recurrence: 'none', ageGroup: '10–16', tags: ['outdoor', 'nature', 'trip'],
+    createdBy: 'u2', createdAt: fmt(addDays(today, -2)),
+    instances: [
+      {
+        id: 'i4a', eventId: 'e4', date: fmt(addDays(today, 14)),
+        startTime: '08:30', endTime: '17:00', shiftStartTime: '07:45', shiftEndTime: '17:30',
+        staffAssigned: ['u2', 'u5'], maxAttendees: 20, status: 'scheduled',
+        attendees: [],
+      },
+    ],
+  },
+  {
+    id: 'e5', title: 'Staff Planning Meeting',
+    description: 'Monthly internal planning and coordination meeting for all staff.',
+    type: 'meeting', venue: 'OYCI Office', requiredStaff: 1, maxAttendees: 15,
+    recurrence: 'monthly', tags: ['internal', 'planning'],
+    createdBy: 'u1', createdAt: fmt(addDays(today, -20)),
+    instances: [
+      {
+        id: 'i5a', eventId: 'e5', date: fmt(addDays(today, -14)),
+        startTime: '09:30', endTime: '11:00',
+        staffAssigned: ['u1', 'u2', 'u3', 'u4', 'u5'], maxAttendees: 15, status: 'completed',
+        attendees: [
+          { youngPersonId: 'I010001', name: 'Sarah Mitchell', present: true },
+          { youngPersonId: 'I010002', name: 'Jamie Robertson', present: true },
+          { youngPersonId: 'I010003', name: 'Priya Sharma', present: false },
+          { youngPersonId: 'I010004', name: 'Callum Baxter', present: true },
+          { youngPersonId: 'I010005', name: 'Aisha Ndiaye', present: true },
+        ],
+      },
+      {
+        id: 'i5b', eventId: 'e5', date: fmt(addDays(today, 16)),
+        startTime: '09:30', endTime: '11:00', shiftStartTime: '09:00', shiftEndTime: '11:30',
+        staffAssigned: ['u1', 'u2', 'u5'], maxAttendees: 15, status: 'scheduled',
+        attendees: [],
+      },
+    ],
+  },
+  {
+    id: 'e6', title: 'Morning Arts & Crafts',
+    description: 'A creative morning session for young people to explore art and crafts.',
+    type: 'activity', venue: 'OYCI Hub, Clackmannan Road', requiredStaff: 2, maxAttendees: 12,
+    recurrence: 'none', ageGroup: '8–14', tags: ['arts', 'crafts', 'creative'],
+    createdBy: 'u1', createdAt: fmt(addDays(today, -3)),
+    instances: [
+      {
+        id: 'i6a', eventId: 'e6', date: fmt(addDays(today, 2)),
+        startTime: '10:00', endTime: '13:00', shiftStartTime: '09:30', shiftEndTime: '13:30',
+        staffAssigned: ['u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+      {
+        id: 'i6b', eventId: 'e6', date: fmt(addDays(today, 3)),
+        startTime: '10:00', endTime: '13:00', shiftStartTime: '09:30', shiftEndTime: '13:30',
+        staffAssigned: ['u3', 'u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+      {
+        id: 'i6c', eventId: 'e6', date: fmt(today),
+        startTime: '10:00', endTime: '12:30', shiftStartTime: '09:30', shiftEndTime: '13:00',
+        staffAssigned: ['u3', 'u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+      {
+        id: 'i6d', eventId: 'e6', date: fmt(addDays(today, 7)),
+        startTime: '14:30', endTime: '17:00', shiftStartTime: '14:00', shiftEndTime: '17:30',
+        staffAssigned: ['u3', 'u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+      {
+        id: 'i6e', eventId: 'e6', date: fmt(addDays(today, 14)),
+        startTime: '10:00', endTime: '13:00', shiftStartTime: '09:30', shiftEndTime: '13:30',
+        staffAssigned: ['u3', 'u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+      {
+        id: 'i6f', eventId: 'e6', date: fmt(addDays(today, 16)),
+        startTime: '13:00', endTime: '15:30', shiftStartTime: '12:30', shiftEndTime: '16:00',
+        staffAssigned: ['u3', 'u4'], maxAttendees: 12, status: 'scheduled', attendees: [],
+      },
+    ],
+  },
+];
+
+const AVAILABILITY_OVERRIDES = [
+  { staffId: 'u4', date: fmt(addDays(today, 1)), status: 'unavailable', note: 'Personal leave' },
+  { staffId: 'u3', date: fmt(addDays(today, 2)), status: 'partial', note: 'Available from 12:00 only' },
+];
+
+module.exports = { USERS, CREDENTIALS, EVENTS, AVAILABILITY_OVERRIDES };
