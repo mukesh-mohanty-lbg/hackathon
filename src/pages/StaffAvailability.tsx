@@ -207,7 +207,6 @@ export function StaffAvailability() {
                 <TableHead className="hidden md:table-cell text-right">Upcoming</TableHead>
                 <TableHead className="hidden lg:table-cell text-center">Sessions</TableHead>
                 <TableHead className="hidden lg:table-cell">Utilisation</TableHead>
-                <TableHead className="text-center">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,11 +245,6 @@ export function StaffAvailability() {
                       {row.utilisationPct !== null
                         ? <UtilBar pct={row.utilisationPct} label={`${row.utilisationPct}%`} />
                         : <span className="text-xs text-muted-foreground">No contract</span>}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={row.user.availability === 'unavailable' ? 'destructive' : 'success'} className="text-xs capitalize">
-                        {row.user.availability === 'unavailable' ? 'Unavailable' : 'Available'}
-                      </Badge>
                     </TableCell>
                   </TableRow>
                 )

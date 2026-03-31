@@ -1,4 +1,9 @@
+<<<<<<< Updated upstream
 // import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
+=======
+
+import type { User, Event, EventInstance, StaffAvailabilityOverride } from '@/types'
+>>>>>>> Stashed changes
 
 // ─── UI mock data is NO LONGER USED ──────────────────────────────────────────
 // All data is now fetched from the backend API.
@@ -16,7 +21,7 @@ export const USERS: User[] = [
     isActive: true,
     joinedDate: '2020-03-15',
     payType: 'salaried',
-    contractedHours: 37,
+    contractedHours: 37.5,
     workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
@@ -29,7 +34,7 @@ export const USERS: User[] = [
     isActive: true,
     joinedDate: '2021-06-01',
     payType: 'salaried',
-    contractedHours: 35,
+    contractedHours: 37.5,
     workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
@@ -38,13 +43,13 @@ export const USERS: User[] = [
     email: 'priya@oyci.org.uk',
     role: 'staff',
     phone: '07700 900003',
-    availability: 'partial',
+    availability: 'available',
     availabilityNote: 'Available mornings only this week',
     isActive: true,
     joinedDate: '2022-01-10',
     payType: 'hourly',
     contractedHours: 20,
-    workingDays: ['mon', 'wed', 'fri'],
+    workingDays: ['mon', 'tue', 'wed', 'thu'],
   },
   {
     id: 'u4',
@@ -56,9 +61,9 @@ export const USERS: User[] = [
     availabilityNote: 'On leave until 4 April',
     isActive: true,
     joinedDate: '2021-09-20',
-    payType: 'fixed-term',
-    contractedHours: 30,
-    workingDays: ['tue', 'wed', 'thu', 'fri'],
+    payType: 'salaried',
+    contractedHours: 37.5,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u5',
@@ -69,9 +74,9 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2023-02-14',
-    payType: 'hourly',
+    payType: 'fixed-term',
     contractedHours: 25,
-    workingDays: ['mon', 'tue', 'thu', 'fri'],
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u6',
@@ -82,9 +87,6 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: false,
     joinedDate: '2020-11-05',
-    payType: 'salaried',
-    contractedHours: 35,
-    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   },
   {
     id: 'u7',
@@ -95,9 +97,6 @@ export const USERS: User[] = [
     availability: 'available',
     isActive: true,
     joinedDate: '2020-11-05',
-    payType: 'hourly',
-    contractedHours: 16,
-    workingDays: ['wed', 'thu', 'fri', 'sat'],
   },
 ]
 
@@ -132,8 +131,6 @@ export const EVENTS: Event[] = [
     tags: ['holiday', 'outdoor', 'arts'],
     createdBy: 'u1',
     createdAt: fmt(addDays(today, -10)),
-    isPublished: true,
-    publishedAt: fmt(addDays(today, -8)),
     instances: [
       {
         id: 'i1a',
@@ -189,8 +186,6 @@ export const EVENTS: Event[] = [
     tags: ['drop-in', 'support'],
     createdBy: 'u2',
     createdAt: fmt(addDays(today, -30)),
-    isPublished: true,
-    publishedAt: fmt(addDays(today, -28)),
     instances: [
       {
         id: 'i2a',
