@@ -34,7 +34,7 @@ export function AttendancePage({ instanceId, onNavigate }: AttendancePageProps) 
   const total = instance.attendees.length
   const dateLabel = new Date(instance.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const handleSave = () => { saveAttendance(instanceId); setSaved(true); onNavigate('event-detail', { instanceId }) }
+  const handleSave = async () => { await saveAttendance(instanceId); setSaved(true); onNavigate('event-detail', { instanceId }) }
 
   return (
     <div className="space-y-6 max-w-2xl">

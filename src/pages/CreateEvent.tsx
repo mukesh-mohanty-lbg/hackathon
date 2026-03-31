@@ -55,14 +55,14 @@ export function CreateEvent({ onNavigate }: CreateEventProps) {
   const next = () => { if (!validateStep(step)) return; setStep(s => (s < 4 ? (s + 1) as Step : s)) }
   const back = () => setStep(s => (s > 1 ? (s - 1) as Step : s))
 
-  const submit = (confirm: boolean) => {
+  const submit = async (confirm: boolean) => {
     if (!confirm) { setStep(1); return }
     const instances: EventInstance[] = form.instances.map((inst, i) => ({
       id: `i_${Date.now()}_${i}`, eventId: '', date: inst.date, startTime: inst.startTime, endTime: inst.endTime,
       shiftStartTime: inst.shiftStartTime || undefined, shiftEndTime: inst.shiftEndTime || undefined,
       staffAssigned: [], maxAttendees: form.maxAttendees, attendees: [], status: 'scheduled' as const,
     }))
-    const ev = addEvent({
+    const ev = await addEvent({
       title: form.title, description: form.description, type: form.type, venue: form.venue,
       ageGroup: form.ageGroup || undefined, tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
       recurrence: form.recurrence, requiredStaff: form.requiredStaff, maxAttendees: form.maxAttendees,

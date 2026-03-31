@@ -1,29 +1,38 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { User, AvailabilityStatus, Event, EventInstance, StaffAvailabilityOverride, ConflictWarning } from '@/types'
-import { USERS, CREDENTIALS, EVENTS, AVAILABILITY_OVERRIDES } from './mockData'
+import {
+  apiLogin, apiLogout, apiGetMe,
+  apiGetUsers, apiCreateUser, apiUpdateUser, apiToggleUserAccess, apiUpdateUserAvailability,
+  apiGetEvents, apiCreateEvent, apiUpdateEvent, apiPublishEvent, apiUnpublishEvent,
+  apiAssignStaff, apiRemoveStaff, apiMarkAttendance, apiSaveAttendance, apiUpdateInstanceStatus, apiBookSessions,
+  apiGetAvailability, apiSetAvailabilityOverride,
+} from './apiClient'
 
 interface AppState {
   currentUser: User | null
+  authLoading: boolean
   users: User[]
   events: Event[]
   availabilityOverrides: StaffAvailabilityOverride[]
-  login: (email: string, password: string) => boolean
+  refreshUsers: () => Promise<void>
+  refreshEvents: () => Promise<void>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
-  addUser: (user: Omit<User, 'id'>) => void
-  updateUser: (id: string, updates: Partial<User>) => void
-  toggleUserAccess: (id: string) => void
-  updateAvailability: (id: string, status: AvailabilityStatus, note?: string) => void
-  setAvailabilityOverride: (override: StaffAvailabilityOverride) => void
-  addEvent: (event: Omit<Event, 'id' | 'createdAt'>) => Event
-  updateEvent: (id: string, updates: Partial<Event>) => void
-  publishEvent: (id: string) => void
-  unpublishEvent: (id: string) => void
-  assignStaffToInstance: (instanceId: string, staffId: string) => { success: boolean; conflicts?: ConflictWarning[] }
-  removeStaffFromInstance: (instanceId: string, staffId: string) => void
-  markAttendance: (instanceId: string, attendeeId: string, present: boolean) => void
-  saveAttendance: (instanceId: string) => void
-  updateInstanceStatus: (instanceId: string, status: EventInstance['status']) => void
-  bookSessionsForCurrentUser: (instanceIds: string[], details: { name: string; email: string; phone?: string }) => { success: boolean; message: string }
+  addUser: (user: Omit<User, 'id'>) => Promise<void>
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>
+  toggleUserAccess: (id: string) => Promise<void>
+  updateAvailability: (id: string, status: AvailabilityStatus, note?: string) => Promise<void>
+  setAvailabilityOverride: (override: StaffAvailabilityOverride) => Promise<void>
+  addEvent: (event: Omit<Event, 'id' | 'createdAt'>) => Promise<Event>
+  updateEvent: (id: string, updates: Partial<Event>) => Promise<void>
+  publishEvent: (id: string) => Promise<void>
+  unpublishEvent: (id: string) => Promise<void>
+  assignStaffToInstance: (instanceId: string, staffId: string) => Promise<{ success: boolean; conflicts?: ConflictWarning[] }>
+  removeStaffFromInstance: (instanceId: string, staffId: string) => Promise<void>
+  markAttendance: (instanceId: string, attendeeId: string, present: boolean) => Promise<void>
+  saveAttendance: (instanceId: string) => Promise<void>
+  updateInstanceStatus: (instanceId: string, status: EventInstance['status']) => Promise<void>
+  bookSessionsForCurrentUser: (instanceIds: string[], details: { name: string; email: string; phone?: string }) => Promise<{ success: boolean; message: string }>
   getInstanceById: (instanceId: string) => EventInstance | undefined
   getEventByInstanceId: (instanceId: string) => Event | undefined
   getUserById: (id: string) => User | undefined
@@ -40,90 +49,107 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const savedId = localStorage.getItem('currentUserId')
-    return savedId ? (USERS.find(u => u.id === savedId && u.isActive) ?? null) : null
-  })
-  const [users, setUsers] = useState<User[]>(USERS)
-  const [events, setEvents] = useState<Event[]>(EVENTS)
-  const [availabilityOverrides, setAvailabilityOverrides] = useState<StaffAvailabilityOverride[]>(AVAILABILITY_OVERRIDES)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [availabilityOverrides, setAvailabilityOverrides] = useState<StaffAvailabilityOverride[]>([])
+  const [authLoading, setAuthLoading] = useState(true)
 
-  const login = useCallback((email: string, password: string): boolean => {
-    const expected = CREDENTIALS[email]
-    if (!expected || expected !== password) return false
-    const user = USERS.find(u => u.email === email)
-    if (!user || !user.isActive) return false
-    setCurrentUser(user)
-    localStorage.setItem('currentUserId', user.id)
-    return true
+  // ─── Data fetchers ─────────────────────────────────────────────────────────
+  const refreshUsers = useCallback(async () => {
+    try { setUsers(await apiGetUsers()) } catch { /* keep current */ }
   }, [])
+
+  const refreshEvents = useCallback(async () => {
+    try { setEvents(await apiGetEvents()) } catch { /* keep current */ }
+  }, [])
+
+  const refreshOverrides = useCallback(async () => {
+    try { setAvailabilityOverrides(await apiGetAvailability()) } catch { /* keep current */ }
+  }, [])
+
+  // Restore session from token on mount, then load all data
+  useEffect(() => {
+    const init = async () => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const data = await apiGetMe()
+          setCurrentUser(data.user as User)
+        } catch {
+          apiLogout()
+        }
+      }
+      // Load data from API regardless of auth state
+      await Promise.all([refreshUsers(), refreshEvents(), refreshOverrides()])
+      setAuthLoading(false)
+    }
+    init()
+  }, [refreshUsers, refreshEvents, refreshOverrides])
+
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      const data = await apiLogin(email, password)
+      const user = data.user as User
+      setCurrentUser(user)
+      await Promise.all([refreshUsers(), refreshEvents(), refreshOverrides()])
+      return true
+    } catch {
+      return false
+    }
+  }, [refreshUsers, refreshEvents, refreshOverrides])
 
   const logout = useCallback(() => {
+    apiLogout()
     setCurrentUser(null)
-    localStorage.removeItem('currentUserId')
   }, [])
 
-  const addUser = useCallback((data: Omit<User, 'id'>) => {
-    setUsers(prev => [...prev, { ...data, id: `u${Date.now()}` }])
+  const addUser = useCallback(async (data: Omit<User, 'id'>) => {
+    const newUser = await apiCreateUser(data)
+    setUsers(prev => [...prev, newUser])
   }, [])
 
-  const updateUser = useCallback((id: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, ...updates } : u)))
-    setCurrentUser(prev => (prev?.id === id ? { ...prev, ...updates } : prev))
+  const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
+    const updated = await apiUpdateUser(id, updates)
+    setUsers(prev => prev.map(u => (u.id === id ? updated : u)))
+    setCurrentUser(prev => (prev?.id === id ? updated : prev))
   }, [])
 
-  const toggleUserAccess = useCallback((id: string) => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, isActive: !u.isActive } : u)))
+  const toggleUserAccess = useCallback(async (id: string) => {
+    const updated = await apiToggleUserAccess(id)
+    setUsers(prev => prev.map(u => (u.id === id ? updated : u)))
   }, [])
 
-  const updateAvailability = useCallback((id: string, status: AvailabilityStatus, note?: string) => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, availability: status, availabilityNote: note } : u)))
-    setCurrentUser(prev => prev?.id === id ? { ...prev, availability: status, availabilityNote: note } : prev)
+  const updateAvailability = useCallback(async (id: string, status: AvailabilityStatus, note?: string) => {
+    const updated = await apiUpdateUserAvailability(id, status, note)
+    setUsers(prev => prev.map(u => (u.id === id ? updated : u)))
+    setCurrentUser(prev => prev?.id === id ? updated : prev)
   }, [])
 
-  const setAvailabilityOverride = useCallback((override: StaffAvailabilityOverride) => {
-    setAvailabilityOverrides(prev => {
-      const isFullDay = override.isFullDay ?? (!override.startTime && !override.endTime)
+  const setAvailabilityOverrideAction = useCallback(async (override: StaffAvailabilityOverride) => {
+    await apiSetAvailabilityOverride(override)
+    await refreshOverrides()
+  }, [refreshOverrides])
 
-      if (isFullDay) {
-        const filtered = prev.filter(o => {
-          const otherIsFullDay = o.isFullDay ?? (!o.startTime && !o.endTime)
-          return !(o.staffId === override.staffId && o.date === override.date && otherIsFullDay)
-        })
-        return [...filtered, { ...override, isFullDay: true, startTime: undefined, endTime: undefined }]
-      }
-
-      const filtered = prev.filter(o => {
-        const otherIsFullDay = o.isFullDay ?? (!o.startTime && !o.endTime)
-        return !(
-          o.staffId === override.staffId
-          && o.date === override.date
-          && !otherIsFullDay
-          && o.startTime === override.startTime
-          && o.endTime === override.endTime
-        )
-      })
-
-      return [...filtered, { ...override, isFullDay: false }]
-    })
-  }, [])
-
-  const addEvent = useCallback((data: Omit<Event, 'id' | 'createdAt'>): Event => {
-    const newEvent: Event = { ...data, id: `e${Date.now()}`, createdAt: new Date().toISOString().split('T')[0] }
+  const addEvent = useCallback(async (data: Omit<Event, 'id' | 'createdAt'>): Promise<Event> => {
+    const newEvent = await apiCreateEvent(data)
     setEvents(prev => [...prev, newEvent])
     return newEvent
   }, [])
 
-  const updateEvent = useCallback((id: string, updates: Partial<Event>) => {
-    setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...updates } : e)))
+  const updateEvent = useCallback(async (id: string, updates: Partial<Event>) => {
+    const updated = await apiUpdateEvent(id, updates)
+    setEvents(prev => prev.map(e => (e.id === id ? updated : e)))
   }, [])
 
-  const publishEvent = useCallback((id: string) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, isPublished: true, publishedAt: new Date().toISOString() } : e))
+  const publishEvent = useCallback(async (id: string) => {
+    const updated = await apiPublishEvent(id)
+    setEvents(prev => prev.map(e => e.id === id ? updated : e))
   }, [])
 
-  const unpublishEvent = useCallback((id: string) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, isPublished: false, publishedAt: undefined } : e))
+  const unpublishEvent = useCallback(async (id: string) => {
+    const updated = await apiUnpublishEvent(id)
+    setEvents(prev => prev.map(e => e.id === id ? updated : e))
   }, [])
 
   const getInstanceById = useCallback((instanceId: string): EventInstance | undefined => {
@@ -208,101 +234,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [users, events, availabilityOverrides])
 
   const assignStaffToInstance = useCallback(
-    (instanceId: string, staffId: string): { success: boolean; conflicts?: ConflictWarning[] } => {
-      const targetEvent = events.find(ev => ev.instances.some(i => i.id === instanceId))
-      if (!targetEvent) return { success: false }
-      const targetInst = targetEvent.instances.find(i => i.id === instanceId)!
-
-      const conflicts: ConflictWarning[] = []
-      const targetShiftStart = targetInst.shiftStartTime ?? targetInst.startTime
-      const targetShiftEnd = targetInst.shiftEndTime ?? targetInst.endTime
-      for (const ev of events) {
-        for (const inst of ev.instances) {
-          if (inst.id === instanceId) continue
-          if (inst.date !== targetInst.date) continue
-          if (!inst.staffAssigned.includes(staffId)) continue
-          const instShiftStart = inst.shiftStartTime ?? inst.startTime
-          const instShiftEnd = inst.shiftEndTime ?? inst.endTime
-          if (targetShiftStart < instShiftEnd && targetShiftEnd > instShiftStart) {
-            const staff = USERS.find(u => u.id === staffId)
-            conflicts.push({
-              staffId,
-              staffName: staff?.name ?? staffId,
-              conflictingEventTitle: ev.title,
-              conflictDate: inst.date,
-              conflictTime: `${instShiftStart}–${instShiftEnd}`,
-            })
-          }
+    async (instanceId: string, staffId: string): Promise<{ success: boolean; conflicts?: ConflictWarning[] }> => {
+      try {
+        await apiAssignStaff(instanceId, staffId)
+        await refreshEvents()
+        return { success: true }
+      } catch (err: any) {
+        if (err.conflicts) {
+          return { success: false, conflicts: err.conflicts }
         }
+        return { success: false }
       }
-
-      if (conflicts.length > 0) return { success: false, conflicts }
-
-      setEvents(prev =>
-        prev.map(ev => ({
-          ...ev,
-          instances: ev.instances.map(inst =>
-            inst.id === instanceId && !inst.staffAssigned.includes(staffId)
-              ? { ...inst, staffAssigned: [...inst.staffAssigned, staffId] }
-              : inst
-          ),
-        }))
-      )
-      return { success: true }
     },
-    [events]
+    [refreshEvents]
   )
 
-  const removeStaffFromInstance = useCallback((instanceId: string, staffId: string) => {
-    setEvents(prev =>
-      prev.map(ev => ({
-        ...ev,
-        instances: ev.instances.map(inst =>
-          inst.id === instanceId
-            ? { ...inst, staffAssigned: inst.staffAssigned.filter(s => s !== staffId) }
-            : inst
-        ),
-      }))
-    )
-  }, [])
+  const removeStaffFromInstance = useCallback(async (instanceId: string, staffId: string) => {
+    await apiRemoveStaff(instanceId, staffId)
+    await refreshEvents()
+  }, [refreshEvents])
 
-  const markAttendance = useCallback((instanceId: string, attendeeId: string, present: boolean) => {
-    setEvents(prev =>
-      prev.map(ev => ({
-        ...ev,
-        instances: ev.instances.map(inst =>
-          inst.id === instanceId
-            ? { ...inst, attendees: inst.attendees.map(a => a.youngPersonId === attendeeId ? { ...a, present } : a) }
-            : inst
-        ),
-      }))
-    )
-  }, [])
+  const markAttendance = useCallback(async (instanceId: string, attendeeId: string, present: boolean) => {
+    await apiMarkAttendance(instanceId, attendeeId, present)
+    await refreshEvents()
+  }, [refreshEvents])
 
-  const saveAttendance = useCallback((instanceId: string) => {
-    setEvents(prev =>
-      prev.map(ev => ({
-        ...ev,
-        instances: ev.instances.map(inst =>
-          inst.id === instanceId ? { ...inst, status: 'completed' as const } : inst
-        ),
-      }))
-    )
-  }, [])
+  const saveAttendance = useCallback(async (instanceId: string) => {
+    await apiSaveAttendance(instanceId)
+    await refreshEvents()
+  }, [refreshEvents])
 
-  const updateInstanceStatus = useCallback((instanceId: string, status: EventInstance['status']) => {
-    setEvents(prev =>
-      prev.map(ev => ({
-        ...ev,
-        instances: ev.instances.map(inst => inst.id === instanceId ? { ...inst, status } : inst),
-      }))
-    )
-  }, [])
+  const updateInstanceStatus = useCallback(async (instanceId: string, status: EventInstance['status']) => {
+    await apiUpdateInstanceStatus(instanceId, status)
+    await refreshEvents()
+  }, [refreshEvents])
 
-  const bookSessionsForCurrentUser = useCallback((
+  const bookSessionsForCurrentUser = useCallback(async (
     instanceIds: string[],
     details: { name: string; email: string; phone?: string }
-  ): { success: boolean; message: string } => {
+  ): Promise<{ success: boolean; message: string }> => {
     if (!currentUser || currentUser.role !== 'individual') {
       return { success: false, message: 'Only individual accounts can book sessions.' }
     }
@@ -312,37 +282,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: 'Select at least one session to continue.' }
     }
 
-    const attendeeName = details.name.trim() || currentUser.name
+    try {
+      const result = await apiBookSessions(
+        currentUser.id,
+        uniqueIds,
+        details.name.trim() || currentUser.name,
+        details.email,
+        details.phone,
+      )
+      await refreshEvents()
 
-    setEvents(prev =>
-      prev.map(ev => ({
-        ...ev,
-        instances: ev.instances.map(inst => {
-          if (!uniqueIds.includes(inst.id)) return inst
-          const alreadyBooked = inst.attendees.some(a => a.youngPersonId === currentUser.id)
-          if (alreadyBooked) return inst
-          return {
-            ...inst,
-            attendees: [...inst.attendees, { youngPersonId: currentUser.id, name: attendeeName, present: null }],
-          }
-        }),
-      }))
-    )
+      // Update phone if changed
+      const nextPhone = details.phone?.trim()
+      if (nextPhone && nextPhone !== currentUser.phone) {
+        await apiUpdateUser(currentUser.id, { phone: nextPhone })
+        await refreshUsers()
+      }
 
-    const nextPhone = details.phone?.trim()
-    if (nextPhone && nextPhone !== currentUser.phone) {
-      setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, phone: nextPhone } : u)))
-      setCurrentUser(prev => (prev?.id === currentUser.id ? { ...prev, phone: nextPhone } : prev))
+      return { success: result.success, message: result.message }
+    } catch {
+      return { success: false, message: 'Booking failed. Please try again.' }
     }
-
-    return { success: true, message: 'Your session booking has been saved.' }
-  }, [currentUser])
+  }, [currentUser, refreshEvents, refreshUsers])
 
   return (
     <AppContext.Provider value={{
-      currentUser, users, events, availabilityOverrides,
+      currentUser, authLoading, users, events, availabilityOverrides,
+      refreshUsers, refreshEvents,
       login, logout, addUser, updateUser, toggleUserAccess,
-      updateAvailability, setAvailabilityOverride,
+      updateAvailability, setAvailabilityOverride: setAvailabilityOverrideAction,
       addEvent, updateEvent, publishEvent, unpublishEvent,
       assignStaffToInstance, removeStaffFromInstance,
       markAttendance, saveAttendance, updateInstanceStatus,

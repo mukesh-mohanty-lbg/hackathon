@@ -29,11 +29,11 @@ export function ProfilePage() {
 
   const isIndividual = currentUser.role === 'individual'
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isFullDay && startTime >= endTime) return
 
-    updateAvailability(currentUser.id, selectedStatus, note)
-    setAvailabilityOverride({
+    await updateAvailability(currentUser.id, selectedStatus, note)
+    await setAvailabilityOverride({
       staffId: currentUser.id,
       date: blockDate,
       status: selectedStatus,

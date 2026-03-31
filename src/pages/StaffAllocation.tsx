@@ -79,8 +79,8 @@ export function StaffAllocation({ onNavigate }: StaffAllocationProps) {
     setExpandedId(prev => (prev === id ? null : id))
   }
 
-  const handleAssign = (instanceId: string, staffId: string) => {
-    const result = assignStaffToInstance(instanceId, staffId)
+  const handleAssign = async (instanceId: string, staffId: string) => {
+    const result = await assignStaffToInstance(instanceId, staffId)
     if (result.success) {
       setSuccessMsg('Staff assigned successfully.')
       setTimeout(() => setSuccessMsg(''), 3000)

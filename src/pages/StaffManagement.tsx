@@ -55,7 +55,7 @@ export function StaffManagement({ onNavigate: _onNavigate }: StaffManagementProp
     return e
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length > 0) { setErrors(e); return }
     const payload = {
@@ -64,8 +64,8 @@ export function StaffManagement({ onNavigate: _onNavigate }: StaffManagementProp
       contractedHours: form.contractedHours === '' ? undefined : Number(form.contractedHours),
       workingDays: form.workingDays.length > 0 ? form.workingDays : undefined,
     }
-    if (editUser) updateUser(editUser.id, payload)
-    else addUser(payload)
+    if (editUser) await updateUser(editUser.id, payload)
+    else await addUser(payload)
     setDialogOpen(false)
   }
 

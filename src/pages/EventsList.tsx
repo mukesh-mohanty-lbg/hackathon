@@ -136,19 +136,17 @@ export function EventsList({ onNavigate }: EventsListProps) {
     toast.success('Session cancelled.')
   }
 
-  const handlePublish = (e: React.MouseEvent, id: string) => {
+  const handlePublish = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setPublishingEventId(id)
-    setTimeout(() => {
-      try {
-        publishEvent(id)
-        toast.success('Event published successfully.')
-      } catch {
-        toast.error('Failed to publish event. Please try again.')
-      } finally {
-        setPublishingEventId(null)
-      }
-    }, 1200)
+    try {
+      await publishEvent(id)
+      toast.success('Event published successfully.')
+    } catch {
+      toast.error('Failed to publish event. Please try again.')
+    } finally {
+      setPublishingEventId(null)
+    }
   }
 
   const myEvents = useMemo(() => {
@@ -223,11 +221,11 @@ export function EventsList({ onNavigate }: EventsListProps) {
     ))
   }
 
-  const handleBookingSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleBookingSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (selectedSessionIds.length === 0) return
 
-    const result = bookSessionsForCurrentUser(selectedSessionIds, {
+    const result = await bookSessionsForCurrentUser(selectedSessionIds, {
       name: bookingName,
       email: bookingEmail,
       phone: bookingPhone,

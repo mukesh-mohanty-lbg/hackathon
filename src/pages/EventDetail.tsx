@@ -47,8 +47,8 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
 
   const dateLabel = new Date(instance.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const handleAssign = (staffId: string) => {
-    const result = assignStaffToInstance(instanceId, staffId)
+  const handleAssign = async (staffId: string) => {
+    const result = await assignStaffToInstance(instanceId, staffId)
     if (result.success) {
       setSuccessMsg('Staff member assigned successfully.')
       setTimeout(() => setSuccessMsg(''), 3000)
@@ -64,9 +64,9 @@ export function EventDetail({ instanceId, onNavigate }: EventDetailProps) {
     handleAssign(staffId)
   }
 
-  const handleBookSession = () => {
+  const handleBookSession = async () => {
     if (!currentUser) return
-    const result = bookSessionsForCurrentUser([instanceId], {
+    const result = await bookSessionsForCurrentUser([instanceId], {
       name: currentUser.name,
       email: currentUser.email,
       phone: currentUser.phone,

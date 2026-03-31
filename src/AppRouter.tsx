@@ -105,7 +105,7 @@ const buildUrl = (page: Page, params: Record<string, string> = {}) => {
 }
 
 export function AppRouter() {
-  const { currentUser } = useApp()
+  const { currentUser, authLoading } = useApp()
   const initial = readRouteState()
   const [page, setPage] = useState<Page>(initial.page)
   const [pageParams, setPageParams] = useState<Record<string, string>>(initial.params)
@@ -126,6 +126,14 @@ export function AppRouter() {
     setPage(safePage)
     setPageParams(params)
     window.history.pushState({}, '', buildUrl(safePage, params))
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="size-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+      </div>
+    )
   }
 
   if (!currentUser) return <LoginPage />

@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useApp } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { AlertCircle, Eye, EyeOff, HelpingHand } from 'lucide-react'
-import { USERS } from '@/store/mockData'
 
 export function LoginPage() {
   const { login } = useApp()
@@ -19,20 +18,11 @@ export function LoginPage() {
     setError('')
     setLoading(true)
 
-    await new Promise(r => setTimeout(r, 600))
-
     const normalizedEmail = email.trim().toLowerCase()
-    const ok = login(normalizedEmail, password)
+    const ok = await login(normalizedEmail, password)
 
     if (!ok) {
       setError('Invalid email or password. Please try again.')
-      setLoading(false)
-      return
-    }
-
-    const mockUser = USERS.find(u => u.email.toLowerCase() === normalizedEmail)
-    if (!mockUser) {
-      setError('User record not found.')
       setLoading(false)
       return
     }
@@ -160,8 +150,7 @@ export function LoginPage() {
                   type="button"
                   onClick={async () => {
                     setLoading(true)
-                    await new Promise(r => setTimeout(r, 600))
-                    login('admin@oyci.org.uk', 'abc123')
+                    await login('admin@oyci.org.uk', 'abc123')
                     setLoading(false)
                   }}
                   disabled={loading}
@@ -184,8 +173,7 @@ export function LoginPage() {
                   type="button"
                   onClick={async () => {
                     setLoading(true)
-                    await new Promise(r => setTimeout(r, 600))
-                    login('staff@oyci.org.uk', 'abc123')
+                    await login('staff@oyci.org.uk', 'abc123')
                     setLoading(false)
                   }}
                   disabled={loading}
