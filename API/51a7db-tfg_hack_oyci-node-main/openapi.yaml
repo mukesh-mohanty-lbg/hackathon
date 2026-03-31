@@ -1,0 +1,1004 @@
+openapi: 3.0.0
+info:
+  title: OYCI Backend API
+  description: Express + SQLite3 backend for the OYCI youth events management platform.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "u1"
+        name:
+          type: string
+          example: "Sarah Mitchell"
+        email:
+          type: string
+          format: email
+          example: "admin@oyci.org.uk"
+        role:
+          type: string
+          enum: [admin, staff, individual]
+        phone:
+          type: string
+          example: "07700 900001"
+        availability:
+          type: string
+          enum: [available, unavailable, partial]
+        availabilityNote:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        joinedDate:
+          type: string
+          format: date
+          example: "2020-03-15"
+        payType:
+          type: string
+          enum: [salaried, hourly, fixed-term]
+        contractedHours:
+          type: number
+          example: 37
+        workingDays:
+          type: array
+          items:
+            type: string
+          example: ["mon", "tue", "wed", "thu", "fri"]
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "e1"
+        title:
+          type: string
+          example: "Youth Football Programme"
+        description:
+          type: string
+        type:
+          type: string
+          enum: [programme, activity, workshop, trip, meeting]
+        venue:
+          type: string
+          example: "Main Hall"
+        requiredStaff:
+          type: integer
+          default: 1
+        maxAttendees:
+          type: integer
+          default: 20
+        recurrence:
+          type: string
+          enum: [none, weekly, monthly]
+        ageGroup:
+          type: string
+          example: "8–16"
+        tags:
+          type: array
+          items:
+            type: string
+        createdBy:
+          type: string
+          example: "u1"
+        createdAt:
+          type: string
+          format: date
+          example: "2025-01-10"
+        isPublished:
+          type: boolean
+        publishedAt:
+          type: string
+          nullable: true
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventInstance'
+
+    EventInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "i1a"
+        eventId:
+          type: string
+          example: "e1"
+        date:
+          type: string
+          format: date
+          example: "2025-06-02"
+        startTime:
+          type: string
+          example: "10:00"
+        endTime:
+          type: string
+          example: "12:00"
+        shiftStartTime:
+          type: string
+          example: "09:30"
+        shiftEndTime:
+          type: string
+          example: "12:30"
+        venueOverride:
+          type: string
+          nullable: true
+        maxAttendees:
+          type: integer
+          default: 20
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        staffAssigned:
+          type: array
+          items:
+            type: string
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attendee'
+
+    Attendee:
+      type: object
+      properties:
+        youngPersonId:
+          type: string
+          example: "u6"
+        name:
+          type: string
+          example: "Aisha Khan"
+        present:
+          type: boolean
+          nullable: true
+
+    AvailabilityOverride:
+      type: object
+      properties:
+        staffId:
+          type: string
+          example: "u2"
+        date:
+          type: string
+          format: date
+          example: "2025-06-10"
+        status:
+          type: string
+          enum: [available, unavailable, partial]
+        isFullDay:
+          type: boolean
+        startTime:
+          type: string
+          nullable: true
+          example: "09:00"
+        endTime:
+          type: string
+          nullable: true
+          example: "13:00"
+        note:
+          type: string
+          nullable: true
+
+    Conflict:
+      type: object
+      properties:
+        staffId:
+          type: string
+        staffName:
+          type: string
+        conflictingEventTitle:
+          type: string
+        conflictDate:
+          type: string
+        conflictTime:
+          type: string
+          example: "10:00–12:00"
+
+paths:
+  /api/auth/login:
+    post:
+      summary: Login to get JWT token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Missing email or password
+        '401':
+          description: Invalid credentials or inactive account
+
+  /api/auth/me:
+    get:
+      summary: Get current logged-in user details
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+  /api/users:
+    get:
+      summary: List users
+      tags:
+        - User Management
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: Create a new user
+      tags:
+        - User Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, role]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                role: { type: string }
+                phone: { type: string }
+                payType: { type: string }
+                contractedHours: { type: number }
+                workingDays:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Missing required fields
+
+  /api/users/{id}:
+    get:
+      summary: Get user by ID
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+    put:
+      summary: Update user
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                role: { type: string }
+                phone: { type: string }
+                availability: { type: string }
+                availabilityNote: { type: string }
+                isActive: { type: boolean }
+                payType: { type: string }
+                contractedHours: { type: number }
+                workingDays:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+  /api/users/{id}/toggle-access:
+    patch:
+      summary: Toggle user isActive status
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+  /api/users/{id}/availability:
+    patch:
+      summary: Update staff availability status
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [available, unavailable, partial]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Availability updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+  # ──────────────────────────────────────────────
+  #  Events
+  # ──────────────────────────────────────────────
+
+  /api/events:
+    get:
+      summary: List events
+      tags:
+        - Events
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: published
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+    post:
+      summary: Create a new event
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type, venue]
+              properties:
+                title: { type: string }
+                type:
+                  type: string
+                  enum: [programme, activity, workshop, trip, meeting]
+                venue: { type: string }
+                description: { type: string }
+                requiredStaff: { type: integer }
+                maxAttendees: { type: integer }
+                recurrence:
+                  type: string
+                  enum: [none, weekly, monthly]
+                ageGroup: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                createdBy: { type: string }
+                isPublished: { type: boolean }
+                publishedAt: { type: string }
+                instances:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date: { type: string, format: date }
+                      startTime: { type: string }
+                      endTime: { type: string }
+                      shiftStartTime: { type: string }
+                      shiftEndTime: { type: string }
+                      venueOverride: { type: string }
+                      maxAttendees: { type: integer }
+                      staffAssigned:
+                        type: array
+                        items: { type: string }
+                      attendees:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            youngPersonId: { type: string }
+                            name: { type: string }
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Missing required fields (title, type, or venue)
+
+  /api/events/{id}:
+    get:
+      summary: Get event by ID
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+    put:
+      summary: Update event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                type: { type: string }
+                venue: { type: string }
+                description: { type: string }
+                requiredStaff: { type: integer }
+                maxAttendees: { type: integer }
+                recurrence: { type: string }
+                ageGroup: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                isPublished: { type: boolean }
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+
+  /api/events/{id}/publish:
+    patch:
+      summary: Publish an event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Event published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+
+  /api/events/{id}/unpublish:
+    patch:
+      summary: Unpublish an event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Event unpublished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+
+  # ──────────────────────────────────────────────
+  #  Event Instances
+  # ──────────────────────────────────────────────
+
+  /api/events/instances/{instanceId}:
+    get:
+      summary: Get a single event instance
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
+                  instance:
+                    $ref: '#/components/schemas/EventInstance'
+        '404':
+          description: Instance not found
+
+  /api/events/instances/{instanceId}/status:
+    patch:
+      summary: Update instance status
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [scheduled, completed, cancelled]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventInstance'
+        '400':
+          description: Missing or invalid status
+        '404':
+          description: Instance not found
+
+  /api/events/instances/{instanceId}/assign-staff:
+    post:
+      summary: Assign a staff member to an instance
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffId]
+              properties:
+                staffId:
+                  type: string
+      responses:
+        '200':
+          description: Staff assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventInstance'
+        '400':
+          description: Missing staffId
+        '404':
+          description: Instance not found
+        '409':
+          description: Staff has a scheduling conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conflict'
+
+  /api/events/instances/{instanceId}/assign-staff/{staffId}:
+    delete:
+      summary: Remove a staff member from an instance
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: staffId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Staff removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventInstance'
+        '404':
+          description: Instance not found
+
+  /api/events/instances/{instanceId}/attendance:
+    patch:
+      summary: Mark attendance for an attendee
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attendeeId, present]
+              properties:
+                attendeeId:
+                  type: string
+                present:
+                  type: boolean
+      responses:
+        '200':
+          description: Attendance updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventInstance'
+        '400':
+          description: Missing attendeeId or present
+        '404':
+          description: Instance or attendee not found
+
+  /api/events/instances/{instanceId}/save-attendance:
+    post:
+      summary: Finalise attendance and mark instance as completed
+      tags:
+        - Event Instances
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Attendance saved and instance completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventInstance'
+        '404':
+          description: Instance not found
+
+  /api/events/instances/book:
+    post:
+      summary: Book sessions for a young person
+      tags:
+        - Event Instances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, instanceIds]
+              properties:
+                userId:
+                  type: string
+                instanceIds:
+                  type: array
+                  items: { type: string }
+                name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+      responses:
+        '200':
+          description: Booking successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  booked:
+                    type: array
+                    items: { type: string }
+                  message:
+                    type: string
+        '400':
+          description: Missing userId or instanceIds
+
+  # ──────────────────────────────────────────────
+  #  Staff
+  # ──────────────────────────────────────────────
+
+  /api/staff/{staffId}/status:
+    get:
+      summary: Check staff availability / conflict status
+      tags:
+        - Staff
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: instanceId
+          in: query
+          description: Check conflicts against a specific instance
+          schema: { type: string }
+        - name: date
+          in: query
+          description: Check status for a specific date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Staff status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [free, conflict, unavailable]
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conflict'
+                  assignedInstances:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventInstance'
+        '400':
+          description: Missing instanceId or date query parameter
+
+  /api/staff/{staffId}/availability-overrides:
+    get:
+      summary: Get availability overrides for a staff member
+      tags:
+        - Staff
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of availability overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilityOverride'
+
+  # ──────────────────────────────────────────────
+  #  Availability
+  # ──────────────────────────────────────────────
+
+  /api/availability:
+    get:
+      summary: List availability overrides
+      tags:
+        - Availability
+      parameters:
+        - name: staffId
+          in: query
+          schema: { type: string }
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of availability overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilityOverride'
+    post:
+      summary: Create or update an availability override
+      tags:
+        - Availability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffId, date, status]
+              properties:
+                staffId: { type: string }
+                date:
+                  type: string
+                  format: date
+                status:
+                  type: string
+                  enum: [available, unavailable, partial]
+                isFullDay: { type: boolean }
+                startTime: { type: string }
+                endTime: { type: string }
+                note: { type: string }
+      responses:
+        '201':
+          description: Availability override created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityOverride'
+        '400':
+          description: Missing required fields
+    delete:
+      summary: Remove an availability override
+      tags:
+        - Availability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffId, date]
+              properties:
+                staffId: { type: string }
+                date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Override removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: number
+        '400':
+          description: Missing staffId or date
